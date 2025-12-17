@@ -807,11 +807,10 @@ function signaling_step4() {
 	sed -i "s|<DHPARAM_PATH>|$DHPARAM_PATH|g" "$TMP_DIR_PATH"/signaling/*
 
 	if [ "$SHOULD_INSTALL_COTURN" = true ]; then
-	EXTERN_IPv4=$(wget -4 https://ifconfig.co -O - -o /dev/null --timeout=5 --tries=1 || true)
+	# EXTERN_IPv4/IPv6 sudah diisi manual via setup-nextcloud-hpb.sh
 	log "Replacing '<SIGNALING_COTURN_EXTERN_IPV4>' with '$EXTERN_IPv4'…"
 	sed -i "s|<SIGNALING_COTURN_EXTERN_IPV4>|$EXTERN_IPv4|g" "$TMP_DIR_PATH"/signaling/*
 
-	EXTERN_IPv6=$(wget -6 https://ifconfig.co -O - -o /dev/null --timeout=5 --tries=1 || true)
 	log "Replacing '<SIGNALING_COTURN_EXTERN_IPV6>' with '$EXTERN_IPv6'…"
 	sed -i "s|<SIGNALING_COTURN_EXTERN_IPV6>|$EXTERN_IPv6|g" "$TMP_DIR_PATH"/signaling/*
 	fi

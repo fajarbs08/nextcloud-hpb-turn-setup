@@ -18,6 +18,8 @@ SSL_CHAIN_PATH_ECDSA=""    # Will be auto filled, if not overriden by settings f
 DHPARAM_PATH=""            # Will be auto filled, if not overriden by settings file.
 LOGFILE_PATH="setup-nextcloud-hpb-$(date +%Y-%m-%dT%H:%M:%SZ).log"
 TMP_DIR_PATH="./tmp"
+EXTERN_IPv4=""
+EXTERN_IPv6=""
 SECRETS_FILE_PATH=""   # Ask user
 EMAIL_USER_ADDRESS=""  # Ask user
 EMAIL_USER_PASSWORD="" # Ask user
@@ -289,6 +291,34 @@ function show_dialogs() {
 	fi
 	log "Using '$EMAIL_SERVER_PORT' for EMAIL_SERVER_PORT".
 	# -----
+
+	# Public IPs (manual input)
+	if { [ "$SHOULD_INSTALL_SIGNALING" = true ] || [ "$SHOULD_INSTALL_COTURN" = true ]; } && [ "$EXTERN_IPv4" = "" ]; then
+		if [ "$UNATTENDED_INSTALL" = true ]; then
+			log_err "Can't continue since this is a non-interactive installation and I'm missing EXTERN_IPv4!"
+			exit 1
+		fi
+
+		EXTERN_IPv4=$(
+			whiptail --title "Public IPv4" \
+				--inputbox "Masukkan IPv4 publik server ini (untuk Coturn).\nKosongkan jika tidak ada IPv4 publik." \
+				10 70 "" 3>&1 1>&2 2>&3
+		)
+	fi
+	log "Using '$EXTERN_IPv4' for EXTERN_IPv4".
+
+	if { [ "$SHOULD_INSTALL_SIGNALING" = true ] || [ "$SHOULD_INSTALL_COTURN" = true ]; } && [ "$EXTERN_IPv6" = "" ]; then
+		if [ "$UNATTENDED_INSTALL" = true ]; then
+			EXTERN_IPv6=""
+		else
+			EXTERN_IPv6=$(
+				whiptail --title "Public IPv6 (opsional)" \
+					--inputbox "Masukkan IPv6 publik server ini (opsional). Kosongkan jika tidak ada IPv6." \
+					10 70 "" 3>&1 1>&2 2>&3
+			)
+		fi
+	fi
+	log "Using '$EXTERN_IPv6' for EXTERN_IPv6".
 
 	# TURN static secret (shared between Coturn & HPB)
 	if { [ "$SHOULD_INSTALL_SIGNALING" = true ] || [ "$SHOULD_INSTALL_COTURN" = true ]; } && [ "$SIGNALING_TURN_STATIC_AUTH_SECRET" = "" ]; then

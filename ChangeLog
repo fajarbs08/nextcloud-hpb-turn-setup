@@ -1,5 +1,10 @@
 2025-12-17 Fajar Budi Setiawan
 
+    * VERSION: Bump version to 1.5.1
+    * setup-nextcloud-hpb.sh: Adjust default SERVER_FQDN prompt (turn.example.org for Coturn-only; hpb.example.org otherwise).
+
+2025-12-17 Fajar Budi Setiawan
+
     * VERSION: Bump version to 1.5.0
     * setup-nextcloud-hpb.sh: EXTERN_IPv4/EXTERN_IPv6 prompts optional (no hard fail in unattended).
     * setup-signaling.sh: Auto-detect public IPs via ifconfig.co (IPv4/IPv6) when not provided.

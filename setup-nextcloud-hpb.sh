@@ -97,6 +97,11 @@ function show_dialogs() {
 			exit 1
 		fi
 
+		default_fqdn="hpb.example.org"
+		if [ "$SHOULD_INSTALL_COTURN" = true ] && [ "$SHOULD_INSTALL_SIGNALING" != true ]; then
+			default_fqdn="turn.example.org"
+		fi
+
 		SERVER_FQDN=$(
 			whiptail --title "Server Domain" \
 				--inputbox "Masukkan FQDN server untuk layanan yang Anda pilih. $(
@@ -104,7 +109,7 @@ function show_dialogs() {
 				)Jika memilih Coturn saja: masukkan domain server TURN.\n$(
 				)(Tanpa http(s)://, hanya nama domain) $(
 				)\n\nPastikan domain sudah ada di DNS agar pembuatan sertifikat SSL berhasil!" \
-				14 70 "hpb.example.org" 3>&1 1>&2 2>&3
+				14 70 "$default_fqdn" 3>&1 1>&2 2>&3
 		)
 	fi
 	# Filter out HTTPS:// or HTTP://

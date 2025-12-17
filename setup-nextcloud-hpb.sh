@@ -729,7 +729,7 @@ function main() {
 			)packages like Certbot, Nginx, ufw, unattended-upgrades, msmtp may $(
 			)also be installed." 16 90 4 \
 			"1" "Install Collabora (coolwsd, code-brand)" OFF \
-			"2" "Install HPB signaling (nats-server, janus, nextcloud-spreed-signaling)" OFF \
+			"2" "Install HPB signaling (nats-server, janus, nextcloud-spreed-signaling; requires TURN endpoint info)" OFF \
 			"3" "Install Coturn (TURN server) + certbot + ufw" OFF \
 			"4" "Install HPB signaling + Coturn (complete Talk backend stack)" OFF \
 			3>&1 1>&2 2>&3 || true)

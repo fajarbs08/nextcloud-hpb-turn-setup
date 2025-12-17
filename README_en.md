@@ -26,7 +26,7 @@ You are guided by 8 dialogues during the installation and then the packages are 
 **Current interactive install options:**
 
 - Collabora (includes nginx/certbot/ufw)
-- HPB signaling (janus, nats, nextcloud-spreed-signaling) + nginx/certbot/ufw
+- HPB signaling (janus, nats, nextcloud-spreed-signaling) + nginx/certbot/ufw (requires TURN endpoint info: FQDN/port/secret)
 - Coturn + certbot + ufw + unattended-upgrades + msmtp (no nginx, so port 443 can be used for TURN)
 - HPB signaling + Coturn (full Talk stack, includes nginx/certbot/ufw)
 

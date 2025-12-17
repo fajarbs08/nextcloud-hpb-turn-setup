@@ -302,9 +302,13 @@ function show_dialogs() {
 		if [ "$UNATTENDED_INSTALL" != true ]; then
 			EXTERN_IPv4=$(
 				whiptail --title "Public IPv4" \
-					--inputbox "Masukkan IPv4 publik server ini (untuk Coturn).\nKosongkan jika tidak ada IPv4 publik." \
+					--inputbox "Masukkan IPv4 publik server ini (untuk Coturn).\nKosongkan jika ingin autodetect." \
 					10 70 "" 3>&1 1>&2 2>&3
 			)
+		fi
+
+		if [ "$EXTERN_IPv4" = "" ]; then
+			EXTERN_IPv4=$(wget -4 https://ifconfig.co -O - -o /dev/null || true)
 		fi
 	fi
 	log "Using '$EXTERN_IPv4' for EXTERN_IPv4".
@@ -313,9 +317,13 @@ function show_dialogs() {
 		if [ "$UNATTENDED_INSTALL" != true ]; then
 			EXTERN_IPv6=$(
 				whiptail --title "Public IPv6 (opsional)" \
-					--inputbox "Masukkan IPv6 publik server ini (opsional). Kosongkan jika tidak ada IPv6." \
+					--inputbox "Masukkan IPv6 publik server ini (opsional). Kosongkan jika ingin autodetect/IPv6 tidak ada." \
 					10 70 "" 3>&1 1>&2 2>&3
 			)
+		fi
+
+		if [ "$EXTERN_IPv6" = "" ]; then
+			EXTERN_IPv6=$(wget -6 https://ifconfig.co -O - -o /dev/null || true)
 		fi
 	fi
 	log "Using '$EXTERN_IPv6' for EXTERN_IPv6".

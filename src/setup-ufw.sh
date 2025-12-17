@@ -53,9 +53,15 @@ function ufw_step2() {
 		${_cmdprefix}ufw allow "WWW Full" comment "Nextcloud HPB Nginx" | tee -a $LOGFILE_PATH
 	fi
 
-	# Coturn
-	if [ "$SHOULD_INSTALL_SIGNALING" = true ]; then
-		${_cmdprefix}ufw allow 5349 comment "Nextcloud HPB Coturn" | tee -a $LOGFILE_PATH
+	# Certbot without Nginx still needs 80 open for HTTP-01
+	if [ "$SHOULD_INSTALL_CERTBOT" = true ] && [ "$SHOULD_INSTALL_NGINX" != true ]; then
+		${_cmdprefix}ufw allow 80 comment "HTTP for Certbot challenge" | tee -a $LOGFILE_PATH
+	fi
+
+	# Coturn (TCP/UDP) - only if Coturn dipasang di host ini
+	if [ "$SHOULD_INSTALL_COTURN" = true ]; then
+		port="${SIGNALING_COTURN_TLS_PORT:-5349}"
+		${_cmdprefix}ufw allow "$port" comment "Nextcloud HPB Coturn" | tee -a $LOGFILE_PATH
 	fi
 
 	_ufwargs=""

@@ -26,6 +26,9 @@ EMAIL_SERVER_HOST=""   # Ask user
 EMAIL_SERVER_PORT=""   # Ask user
 DISABLE_SSH_SERVER=false
 SIGNALING_BUILD_FROM_SOURCES="" # Ask user
+SHOULD_INSTALL_COTURN=false
+SIGNALING_TURN_STATIC_AUTH_SECRET=""
+SIGNALING_COTURN_TLS_PORT=""
 DEBIAN_VERSION_ATLEAST="11"
 
 SETUP_VERSION=$(cat VERSION | head -n 1 | tr '\n' ' ')
@@ -279,6 +282,59 @@ function show_dialogs() {
 	fi
 	log "Using '$EMAIL_SERVER_PORT' for EMAIL_SERVER_PORT".
 	# -----
+
+	# TURN static secret (shared between Coturn & HPB)
+	if { [ "$SHOULD_INSTALL_SIGNALING" = true ] || [ "$SHOULD_INSTALL_COTURN" = true ]; } && [ "$SIGNALING_TURN_STATIC_AUTH_SECRET" = "" ]; then
+		# Jika memasang Coturn, kita bisa langsung generate otomatis dan simpan di secrets.
+		if [ "$SHOULD_INSTALL_COTURN" = true ] && [ "$UNATTENDED_INSTALL" = false ]; then
+			SIGNALING_TURN_STATIC_AUTH_SECRET="$(openssl rand -hex 32)"
+			log "Generated TURN static secret for Coturn (disimpan ke secrets file, tidak ditampilkan)."
+		else
+			if [ "$UNATTENDED_INSTALL" = true ]; then
+				log_err "Missing SIGNALING_TURN_STATIC_AUTH_SECRET for unattended install!"
+				exit 1
+			fi
+
+			local default_turn_secret
+			default_turn_secret=$(openssl rand -hex 32)
+			SIGNALING_TURN_STATIC_AUTH_SECRET=$(
+				whiptail --title "TURN shared secret" \
+					--inputbox "Masukkan shared secret untuk TURN (Coturn/HPB). $(
+					)Gunakan nilai yang sama di semua server yang berbagi TURN." \
+					12 70 "$default_turn_secret" 3>&1 1>&2 2>&3
+			)
+			log "Using provided TURN static secret (value disembunyikan dari log)."
+		fi
+	fi
+
+	# TURN TLS port (for Coturn + references in HPB configs)
+	if { [ "$SHOULD_INSTALL_SIGNALING" = true ] || [ "$SHOULD_INSTALL_COTURN" = true ]; } && [ "$SIGNALING_COTURN_TLS_PORT" = "" ]; then
+		if [ "$UNATTENDED_INSTALL" = true ]; then
+			log_err "Missing SIGNALING_COTURN_TLS_PORT for unattended install!"
+			exit 1
+		fi
+
+		local port_warning=""
+		if [ "$SHOULD_INSTALL_NGINX" = true ]; then
+			port_warning="Catatan: Nginx memakai 443 untuk HTTPS. Jika butuh TURN di 443, gunakan IP terpisah atau pindahkan Nginx."
+		fi
+
+		SIGNALING_COTURN_TLS_PORT=$(
+			whiptail --title "TURN TLS port" \
+				--inputbox "Port TLS untuk Coturn (TURN/TLS/DTLS). $(
+				)Default 5349. Jika pilih 443, pastikan tidak bentrok dengan nginx/HTTPS $(
+				)dan service memiliki izin CAP_NET_BIND_SERVICE. $port_warning" \
+				13 75 "5349" 3>&1 1>&2 2>&3
+		)
+		log "Using '$SIGNALING_COTURN_TLS_PORT' for SIGNALING_COTURN_TLS_PORT."
+	fi
+
+	if { [ "$SHOULD_INSTALL_SIGNALING" = true ] || [ "$SHOULD_INSTALL_COTURN" = true ]; } && [ "$SIGNALING_COTURN_TLS_PORT" != "" ]; then
+		if ! [[ "$SIGNALING_COTURN_TLS_PORT" =~ ^[0-9]+$ ]] || [ "$SIGNALING_COTURN_TLS_PORT" -le 0 ] || [ "$SIGNALING_COTURN_TLS_PORT" -gt 65535 ]; then
+			log_err "SIGNALING_COTURN_TLS_PORT must be a number between 1 and 65535."
+			exit 1
+		fi
+	fi
 
 	CERTBOT_AGREE_TOS=""
 	LETSENCRYPT_TOS_URL="https://letsencrypt.org/documents/LE-SA-v1.2-November-15-2017.pdf"
@@ -614,18 +670,23 @@ function main() {
 		# Override settings file!
 		SHOULD_INSTALL_UFW=false
 		SHOULD_INSTALL_COLLABORA=false
+		SHOULD_INSTALL_COTURN=false
 		SHOULD_INSTALL_SIGNALING=false
 		SHOULD_INSTALL_CERTBOT=false
 		SHOULD_INSTALL_NGINX=false
 		SHOULD_INSTALL_UNATTENDEDUPGRADES=false
 		SHOULD_INSTALL_MSMTP=false
+		SIGNALING_COTURN_TLS_PORT=""
 
 		CHOICES=$(whiptail --title "Select services" --separate-output \
 			--checklist "Use the space bar key to select/deselect the services $(
-			)you want to install.\n\nThe following services/packages will also be $(
-			)installed: Certbot Nginx ssl-cert ufw unattended-upgrades" 15 90 2 \
+			)you want to install.\n\nNote: Depending on your choices, supporting $(
+			)packages like Certbot, Nginx, ufw, unattended-upgrades, msmtp may $(
+			)also be installed." 16 90 4 \
 			"1" "Install Collabora (coolwsd, code-brand)" ON \
-			"2" "Install Signaling (nats-server, coturn, janus, nextcloud-spreed-signaling)" ON \
+			"2" "Install HPB signaling (nats-server, janus, nextcloud-spreed-signaling)" ON \
+			"3" "Install Coturn (TURN server) + certbot + ufw" ON \
+			"4" "Install HPB signaling + Coturn (complete Talk backend stack)" ON \
 			3>&1 1>&2 2>&3 || true)
 
 		if [ -z "$CHOICES" ]; then
@@ -644,8 +705,24 @@ function main() {
 					SHOULD_INSTALL_MSMTP=true
 					;;
 				"2")
-					log "Signaling (certbot, nginx, ufw) will be installed."
+					log "HPB signaling (certbot, nginx, ufw) will be installed."
 					SHOULD_INSTALL_UFW=true
+					SHOULD_INSTALL_SIGNALING=true
+					SHOULD_INSTALL_NGINX=true
+					SHOULD_INSTALL_CERTBOT=true
+					SHOULD_INSTALL_UNATTENDEDUPGRADES=true
+					SHOULD_INSTALL_MSMTP=true
+					;;
+				"3")
+					log "Coturn (certbot, ufw) will be installed."
+					SHOULD_INSTALL_UFW=true
+					SHOULD_INSTALL_COTURN=true
+					SHOULD_INSTALL_CERTBOT=true
+					;;
+				"4")
+					log "HPB signaling + Coturn (certbot, nginx, ufw) will be installed."
+					SHOULD_INSTALL_UFW=true
+					SHOULD_INSTALL_COTURN=true
 					SHOULD_INSTALL_SIGNALING=true
 					SHOULD_INSTALL_NGINX=true
 					SHOULD_INSTALL_CERTBOT=true
@@ -709,6 +786,9 @@ function main() {
 	if [ "$SHOULD_INSTALL_COLLABORA" = true ]; then install_collabora; else
 		log "Won't install Collabora."
 	fi
+	if [ "$SHOULD_INSTALL_COTURN" = true ]; then install_coturn; else
+		log "Won't install Coturn."
+	fi
 	if [ "$SHOULD_INSTALL_SIGNALING" = true ]; then install_signaling; else
 		log "Won't install Signaling."
 	fi
@@ -741,7 +821,10 @@ function main() {
 		SERVICES_TO_ENABLE+=("coolwsd")
 	fi
 	if [ "$SHOULD_INSTALL_SIGNALING" = true ]; then
-		SERVICES_TO_ENABLE+=("coturn" "nats-server" "nextcloud-spreed-signaling" "janus")
+		SERVICES_TO_ENABLE+=("nats-server" "nextcloud-spreed-signaling" "janus")
+	fi
+	if [ "$SHOULD_INSTALL_COTURN" = true ]; then
+		SERVICES_TO_ENABLE+=("coturn")
 	fi
 	#if [ "$SHOULD_INSTALL_CERTBOT" = true ]; then fi
 	if [ "$SHOULD_INSTALL_NGINX" = true ]; then
@@ -778,6 +861,10 @@ function main() {
 		collabora_print_info
 		log "======================================================================"
 	fi
+	if [ "$SHOULD_INSTALL_COTURN" = true ]; then
+		coturn_print_info
+		log "======================================================================"
+	fi
 	if [ "$SHOULD_INSTALL_SIGNALING" = true ]; then
 		signaling_print_info
 		log "======================================================================"
@@ -811,6 +898,9 @@ function main() {
 	# fi
 	if [ "$SHOULD_INSTALL_COLLABORA" = true ]; then
 		collabora_write_secrets_to_file "$SECRETS_FILE_PATH"
+	fi
+	if [ "$SHOULD_INSTALL_COTURN" = true ]; then
+		coturn_write_secrets_to_file "$SECRETS_FILE_PATH"
 	fi
 	if [ "$SHOULD_INSTALL_SIGNALING" = true ]; then
 		signaling_write_secrets_to_file "$SECRETS_FILE_PATH"

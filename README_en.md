@@ -22,6 +22,15 @@ Please note that Collabora Office in this version is the community edition. Of c
 
 You are guided by 8 dialogues during the installation and then the packages are fully installed, configured and you will receive an overview with all the keys for the Nextcloud instance. The script can also manage several Nextcloud URLs on the server. In the script, simply enter these with commas sepparized(multidomain).
 
+**Current interactive install options:**
+
+- Collabora (includes nginx/certbot/ufw)
+- HPB signaling (janus, nats, nextcloud-spreed-signaling) + nginx/certbot/ufw
+- Coturn + certbot + ufw (no nginx, so port 443 can be used for TURN)
+- HPB signaling + Coturn (full Talk stack, includes nginx/certbot/ufw)
+
+Extras: TURN TLS port prompt (default 5349; 443 possible—avoid clashes with nginx, CAP_NET_BIND_SERVICE is applied), TURN secret can be generated automatically and saved to the secrets file, all values are printed at the end.
+
 
 **The following systems/applications wil be installed:**
 
@@ -62,3 +71,7 @@ Please always remember that free software does not exist for nothing. People spe
 I would like to thank the three companies Nextcloud GmbH, Structure AG and Collabora for the great software that enables us a self-determined free work in the cloud.
 
 Mirco Rohloff
+
+### Credits (modifications)
+
+- Install options, Coturn port prompt, firewall tweaks: **promax**.

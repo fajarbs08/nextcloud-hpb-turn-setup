@@ -1,6 +1,7 @@
 <p align="center">
   <span>Deutsch</span> |
-  <a href="https://github.com/sunweaver/nextcloud-high-performance-backend-setup/blob/main/README_en.md">English</a>
+  <a href="https://github.com/sunweaver/nextcloud-high-performance-backend-setup/blob/main/README_en.md">English</a> |
+  <a href="#bahasa-indonesia">Bahasa Indonesia</a>
 </p>
 
 # Einfaches Setup für Nextcloud Hochleistungsbackend, Signaling & Collabora Office für Debian 13 (Trixie)
@@ -20,6 +21,15 @@ Bitte beachten Sie, dass Collabora Office hier in der Community Version installi
 * Eine Subdomain für den Server, auf dem das Skript installiert wird
 
 Sie werden bei der Installation durch 8 Dialoge geführt und danach werden die Pakete voll automatisch installiert, konfiguriert und Sie erhalten eine Übersicht mit allen einzutragenden Schlüsseln für die Nextcloud-Instanz. Das Skript kann auch mehrere Nextcloud-URLs auf dem Server verwalten. Diese geben Sie in dem Script einfach mit Kommata separiert ein (Multidomain).
+
+**Aktuelle Installationsoptionen (interaktiv wählbar):**
+
+- Collabora (inkl. nginx/certbot/ufw)
+- HPB Signaling (janus, nats, nextcloud-spreed-signaling) + nginx/certbot/ufw
+- Coturn + certbot + ufw (ohne nginx, Port 443 kann für TURN genutzt werden)
+- HPB Signaling + Coturn (gesamter Talk-Stack, inkl. nginx/certbot/ufw)
+
+Zusätze: Eingabe port TURN (Standard 5349, 443 möglich; bei 443 auf Kollision mit nginx achten, CAP_NET_BIND_SERVICE wird gesetzt), Secret TURN kann automatisch erzeugt und in der Secrets-Datei gesichert werden, alle Werte werden am Ende ausgegeben.
 
 
 **Folgende Systeme/Anwendungen werden installiert:**
@@ -61,3 +71,25 @@ Bitte denken Sie immer daran, dass es auch freie Software nicht umsonst gibt. Hi
 Ich möchte mich hier noch bei den drei Firmen Nextcloud GmbH, Struktur AG sowie Collabora für die tolle Software bedanken, die uns ein selbstbestimmtes freies Arbeiten in der Cloud ermöglicht.  
 
 Mirco Rohloff
+
+## Bahasa Indonesia {#bahasa-indonesia}
+
+Skrip ini memasang backend kinerja tinggi Nextcloud (HPB), Coturn, Signaling, dan Collabora untuk Debian. Sudah tersedia pilihan instalasi interaktif dengan empat opsi utama:
+
+- Collabora (termasuk nginx/certbot/ufw).
+- HPB signaling (janus, nats, nextcloud-spreed-signaling) + nginx/certbot/ufw.
+- Coturn + certbot + ufw (tanpa nginx, port 443 bisa dipakai Coturn).
+- HPB signaling + Coturn (stack lengkap, nginx/certbot/ufw).
+
+Fitur tambahan:
+- Prompt port Coturn (default 5349, bisa 443; jika 443 dipakai, pastikan tidak bentrok dengan nginx dan butuh izin CAP_NET_BIND_SERVICE).
+- Secret TURN bisa dibuat otomatis saat memasang Coturn dan disimpan di file secrets untuk dipakai ulang di HPB.
+- Ringkasan konfigurasi (TURN/STUN, endpoint HPB, secret per-domain) tersimpan di file secrets dan dicetak di akhir instalasi.
+
+### Kredit
+
+- Modifikasi opsi instalasi, input port Coturn, dan penyesuaian firewall: **promax**.
+
+### Credits / Credits (Deutsch)
+
+- Erweiterungen (Installationsoptionen, Coturn-Port-Dialog, Firewall-Anpassungen): **promax**.

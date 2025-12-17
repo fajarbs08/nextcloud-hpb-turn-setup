@@ -18,6 +18,11 @@ UNATTENDED_INSTALL=false
 #NEXTCLOUD_SERVER_FQDNS="nextcloud.example.org"
 # Leave empty, if you wish that the user will be asked about this.
 #SERVER_FQDN="nc-workhorse.example.org"
+# If Coturn berada di host berbeda, setel domainnya di sini.
+#SIGNALING_COTURN_URL="turn.example.org"
+# Reuse this secret if Coturn and HPB run on different hosts.
+#SIGNALING_TURN_STATIC_AUTH_SECRET=""
+#SIGNALING_COTURN_TLS_PORT="5349"
 
 # Only modify if you know what you're doing.
 #SSL_CERT_PATH_RSA=""
@@ -33,6 +38,7 @@ SHOULD_INSTALL_COLLABORA=true
 
 # Signaling (Gets asked anyway, except unattended install.)
 SHOULD_INSTALL_SIGNALING=true
+SHOULD_INSTALL_COTURN=true
 
 SHOULD_INSTALL_UFW=true
 SHOULD_INSTALL_NGINX=true

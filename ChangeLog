@@ -1,4 +1,10 @@
-2025-10-27 Daniel Teichmann
+2025-10-27 Fajar Budi Setiawan
+
+    * VERSION: Bump version to 1.4.0
+    * setup-nextcloud-hpb.sh: Add interactive port prompt for Coturn, secret TURN generation, new install options (Coturn-only, HPB+Coturn), and UFW updates.
+    * src/setup-signaling.sh: Honor custom Coturn port, setcap for low ports, split Coturn install path, and keep TURN info in secrets.
+    * src/setup-ufw.sh: Allow configurable Coturn port; open port 80 for certbot when nginx absent.
+    * README.md/README_en.md: Document new install options, Coturn port prompt, and add credits.
 
         * VERSION: Bump version to 1.3.3 (HEAD -> main)
         * setup-nextcloud-hpb.sh: Fix old logging files being deleted too

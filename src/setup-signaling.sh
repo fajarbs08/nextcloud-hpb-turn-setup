@@ -7,12 +7,15 @@
 
 SIGNALING_BACKPORTS_SOURCE_FILE="/etc/apt/sources.list.d/debian-backports.list"
 
-SIGNALING_TURN_STATIC_AUTH_SECRET="$(openssl rand -hex 32)"
-SIGNALING_JANUS_API_KEY="$(openssl rand -base64 16)"
-SIGNALING_HASH_KEY="$(openssl rand -hex 16)"
-SIGNALING_BLOCK_KEY="$(openssl rand -hex 16)"
+: "${SIGNALING_TURN_STATIC_AUTH_SECRET:=$(openssl rand -hex 32)}"
+: "${SIGNALING_JANUS_API_KEY:=$(openssl rand -base64 16)}"
+: "${SIGNALING_HASH_KEY:=$(openssl rand -hex 16)}"
+: "${SIGNALING_BLOCK_KEY:=$(openssl rand -hex 16)}"
 
-SIGNALING_COTURN_URL="$SERVER_FQDN"
+if [ -z "$SIGNALING_COTURN_URL" ]; then
+	SIGNALING_COTURN_URL="$SERVER_FQDN"
+fi
+: "${SIGNALING_COTURN_TLS_PORT:=5349}"
 
 COTURN_DIR="/etc/coturn"
 
@@ -95,24 +98,66 @@ function run_with_progress() {
 	return $exit_code
 }
 
-function install_signaling() {
-	announce_installation "Installing Signaling"
-	log "Installing Signaling…"
-
+function signaling_configure_backports() {
 	if [ "$DEBIAN_VERSION_MAJOR" = "12" ] ; then
 		log "Enabling bookworm-backports..."
 		is_dry_run || cat <<-EOL >$SIGNALING_BACKPORTS_SOURCE_FILE
 			# Added by nextcloud-high-performance-backend setup-script.
 			deb http://deb.debian.org/debian bookworm-backports main
 		EOL
-	fi
-	if [ "$DEBIAN_VERSION_MAJOR" = "11" ]; then
+	elif [ "$DEBIAN_VERSION_MAJOR" = "11" ]; then
 		log "Enabling bullseye-backports..."
 		is_dry_run || cat <<-EOL >$SIGNALING_BACKPORTS_SOURCE_FILE
 			# Added by nextcloud-high-performance-backend setup-script.
 			deb http://deb.debian.org/debian bullseye-backports main
 		EOL
 	fi
+}
+
+function signaling_prepare_turn_configuration() {
+	log "Preparing Coturn configuration…"
+
+	# Make SSL certificates available for coturn
+	if [ "$SHOULD_INSTALL_CERTBOT" = true ] && ! is_dry_run; then
+		mkdir -p "$COTURN_DIR/certs"
+		adduser turnserver ssl-cert
+	else
+		is_dry_run || mkdir -p "$COTURN_DIR"
+	fi
+
+	generate_dhparam_file
+
+	is_dry_run || chown -R turnserver:turnserver "$COTURN_DIR"
+	is_dry_run || chmod -R 740 "$COTURN_DIR"
+
+	EXTERN_IPv4=$(wget -4 https://ident.me -O - -o /dev/null || true)
+	EXTERN_IPv6=$(wget -6 https://ident.me -O - -o /dev/null || true)
+
+	log "Replacing Coturn placeholders in templates…"
+	sed -i "s|<SIGNALING_TURN_STATIC_AUTH_SECRET>|$SIGNALING_TURN_STATIC_AUTH_SECRET|g" "$TMP_DIR_PATH"/signaling/turnserver.conf
+	sed -i "s|<SIGNALING_COTURN_URL>|$SIGNALING_COTURN_URL|g" "$TMP_DIR_PATH"/signaling/turnserver.conf
+	sed -i "s|<SSL_CERT_PATH_RSA>|$SSL_CERT_PATH_RSA|g" "$TMP_DIR_PATH"/signaling/turnserver.conf
+	sed -i "s|<SSL_CERT_KEY_PATH_RSA>|$SSL_CERT_KEY_PATH_RSA|g" "$TMP_DIR_PATH"/signaling/turnserver.conf
+	sed -i "s|<SSL_CHAIN_PATH_RSA>|$SSL_CHAIN_PATH_RSA|g" "$TMP_DIR_PATH"/signaling/turnserver.conf
+	sed -i "s|<SSL_CERT_PATH_ECDSA>|$SSL_CERT_PATH_ECDSA|g" "$TMP_DIR_PATH"/signaling/turnserver.conf
+	sed -i "s|<SSL_CERT_KEY_PATH_ECDSA>|$SSL_CERT_KEY_PATH_ECDSA|g" "$TMP_DIR_PATH"/signaling/turnserver.conf
+	sed -i "s|<SSL_CHAIN_PATH_ECDSA>|$SSL_CHAIN_PATH_ECDSA|g" "$TMP_DIR_PATH"/signaling/turnserver.conf
+	sed -i "s|<DHPARAM_PATH>|$DHPARAM_PATH|g" "$TMP_DIR_PATH"/signaling/turnserver.conf
+	sed -i "s|<SIGNALING_COTURN_TLS_PORT>|$SIGNALING_COTURN_TLS_PORT|g" "$TMP_DIR_PATH"/signaling/turnserver.conf
+	sed -i "s|<SIGNALING_COTURN_EXTERN_IPV4>|$EXTERN_IPv4|g" "$TMP_DIR_PATH"/signaling/turnserver.conf
+	sed -i "s|<SIGNALING_COTURN_EXTERN_IPV6>|$EXTERN_IPv6|g" "$TMP_DIR_PATH"/signaling/turnserver.conf
+}
+
+function signaling_deploy_turn_configuration() {
+	log "Deploying Coturn configuration…"
+	deploy_file "$TMP_DIR_PATH"/signaling/turnserver.conf /etc/turnserver.conf || true
+}
+
+function install_signaling() {
+	announce_installation "Installing Signaling"
+	log "Installing Signaling…"
+
+	signaling_configure_backports
 	is_dry_run || apt update 2>&1 | tee -a $LOGFILE_PATH
 
 	APT_PARAMS="-y"
@@ -126,9 +171,9 @@ function install_signaling() {
 
 		# Remove old packages.
 		log "Purging old Signaling packages..."
-		APT_PACKAGES="nextcloud-spreed-signaling janus"
-		if [ "${DEBIAN_VERSION_MAJOR}" = "11" ]; then
-			APT_PACKAGES="${APT_PACKAGES} nats-server coturn"
+		APT_PACKAGES="nextcloud-spreed-signaling janus nats-server"
+		if [ "$SHOULD_INSTALL_COTURN" = true ]; then
+			APT_PACKAGES="${APT_PACKAGES} coturn"
 		fi
 
 		for pkg in $APT_PACKAGES; do
@@ -164,8 +209,10 @@ function install_signaling() {
 
 		# Only if Debian 11
 		if [ "$DEBIAN_VERSION_MAJOR" = "11" ]; then
-			is_dry_run "Would have built coturn now…" || signaling_build_coturn
 			is_dry_run "Would have built nats-server now…" || signaling_build_nats-server
+			if [ "$SHOULD_INSTALL_COTURN" = true ]; then
+				is_dry_run "Would have built coturn now…" || signaling_build_coturn
+			fi
 		fi
 
 		# Installing:
@@ -176,7 +223,11 @@ function install_signaling() {
 			is_dry_run || apt-get install $APT_PARAMS ssl-cert 2>&1 | tee -a $LOGFILE_PATH
 			is_dry_run || apt-get install $APT_PARAMS -t bullseye-backports janus 2>&1 | tee -a $LOGFILE_PATH
 		else
-			is_dry_run || apt-get install $APT_PARAMS ssl-cert nats-server coturn 2>&1 | tee -a $LOGFILE_PATH
+			PACKAGES_TO_INSTALL="ssl-cert nats-server"
+			if [ "$SHOULD_INSTALL_COTURN" = true ]; then
+				PACKAGES_TO_INSTALL="$PACKAGES_TO_INSTALL coturn"
+			fi
+			is_dry_run || apt-get install $APT_PARAMS $PACKAGES_TO_INSTALL 2>&1 | tee -a $LOGFILE_PATH
 		fi
 
 		# Installing:
@@ -214,6 +265,57 @@ function install_signaling() {
 	set -eo pipefail
 
 	log "Signaling install completed."
+}
+
+function install_coturn() {
+	announce_installation "Installing Coturn"
+	log "Installing Coturn…"
+
+	signaling_configure_backports
+	is_dry_run || apt update 2>&1 | tee -a $LOGFILE_PATH
+
+	APT_PARAMS="-y"
+	if [ "$UNATTENDED_INSTALL" == true ]; then
+		log "Trying unattended install for Coturn."
+		export DEBIAN_FRONTEND=noninteractive
+		APT_PARAMS="-qqy"
+	fi
+
+	if [ "$SIGNALING_BUILD_FROM_SOURCES" = true ] && [ "$DEBIAN_VERSION_MAJOR" = "11" ]; then
+		log "Purging old Coturn package before building from sources..."
+		if ! is_dry_run; then
+			apt purge $APT_PARAMS coturn 2>&1 | tee -a "$LOGFILE_PATH" || true
+		fi
+		is_dry_run "Would have built coturn now…" || signaling_build_coturn
+	else
+		is_dry_run || apt-get install $APT_PARAMS ssl-cert coturn 2>&1 | tee -a $LOGFILE_PATH
+	fi
+
+	signaling_prepare_turn_configuration
+	signaling_deploy_turn_configuration
+
+	# Allow binding to low ports like 443 if configured
+	if [ "$SIGNALING_COTURN_TLS_PORT" -lt 1024 ]; then
+		TURNSERVER_BIN=$(command -v turnserver || true)
+		if [ -n "$TURNSERVER_BIN" ]; then
+			if ! command -v setcap >/dev/null 2>&1 && [ "$DRY_RUN" != true ]; then
+				log "Installing libcap2-bin to enable setcap for low port binding…"
+				is_dry_run || apt-get install $APT_PARAMS libcap2-bin 2>&1 | tee -a $LOGFILE_PATH || true
+			fi
+
+			if command -v setcap >/dev/null 2>&1; then
+				log "Granting CAP_NET_BIND_SERVICE to '$TURNSERVER_BIN' for low port $SIGNALING_COTURN_TLS_PORT…"
+				is_dry_run || setcap 'cap_net_bind_service=+ep' "$TURNSERVER_BIN" 2>&1 | tee -a $LOGFILE_PATH || \
+					log_err "Failed to setcap on $TURNSERVER_BIN, ensure it can bind to port $SIGNALING_COTURN_TLS_PORT."
+			else
+				log_err "setcap not available. Please ensure turnserver can bind to port $SIGNALING_COTURN_TLS_PORT (CAP_NET_BIND_SERVICE)."
+			fi
+		else
+			log_err "turnserver binary not found when trying to set low-port capability."
+		fi
+	fi
+
+	log "Coturn install completed."
 }
 
 function signaling_build_janus() {
@@ -598,10 +700,18 @@ function signaling_step3() {
 		exit 1;
 	elif [ "$DEBIAN_VERSION_MAJOR" = "12" ]; then
 		# Special case, please install 'nextcloud-spreed-signaling' from bookworm-backports.
-		is_dry_run || apt-get install $APT_PARAMS janus nats-server coturn ssl-cert 2>&1 | tee -a $LOGFILE_PATH
+		BASE_PACKAGES="janus nats-server ssl-cert"
+		if [ "$SHOULD_INSTALL_COTURN" = true ]; then
+			BASE_PACKAGES="$BASE_PACKAGES coturn"
+		fi
+		is_dry_run || apt-get install $APT_PARAMS $BASE_PACKAGES 2>&1 | tee -a $LOGFILE_PATH
 		is_dry_run || apt-get install $APT_PARAMS -t bookworm-backports nextcloud-spreed-signaling nextcloud-spreed-signaling-client 2>&1 | tee -a $LOGFILE_PATH
 	else
-		is_dry_run || apt-get install $APT_PARAMS janus nats-server coturn ssl-cert nextcloud-spreed-signaling nextcloud-spreed-signaling-client 2>&1 | tee -a $LOGFILE_PATH
+		BASE_PACKAGES="janus nats-server ssl-cert nextcloud-spreed-signaling nextcloud-spreed-signaling-client"
+		if [ "$SHOULD_INSTALL_COTURN" = true ]; then
+			BASE_PACKAGES="$BASE_PACKAGES coturn"
+		fi
+		is_dry_run || apt-get install $APT_PARAMS $BASE_PACKAGES 2>&1 | tee -a $LOGFILE_PATH
 	fi
 }
 
@@ -611,18 +721,9 @@ function signaling_step4() {
 	# Make sure /etc/nginx/snippets/ is created
 	is_dry_run || mkdir -p /etc/nginx/snippets || true
 
-	# Make SSL certificates available for coturn
-	if [ "$SHOULD_INSTALL_CERTBOT" = true ] && ! is_dry_run; then
-		mkdir -p "$COTURN_DIR/certs"
-		adduser turnserver ssl-cert
-	else
-		is_dry_run || mkdir -p "$COTURN_DIR"
+	if [ "$SHOULD_INSTALL_COTURN" = true ]; then
+		signaling_prepare_turn_configuration
 	fi
-
-	generate_dhparam_file
-
-	is_dry_run || chown -R turnserver:turnserver "$COTURN_DIR"
-	is_dry_run || chmod -R 740 "$COTURN_DIR"
 
 	i=0
 	for NC_SERVER in "${NEXTCLOUD_SERVER_FQDNS[@]}"; do
@@ -681,6 +782,8 @@ function signaling_step4() {
 
 	log "Replacing '<SIGNALING_COTURN_URL>' with '$SIGNALING_COTURN_URL'…"
 	sed -i "s|<SIGNALING_COTURN_URL>|$SIGNALING_COTURN_URL|g" "$TMP_DIR_PATH"/signaling/*
+	log "Replacing '<SIGNALING_COTURN_TLS_PORT>' with '$SIGNALING_COTURN_TLS_PORT'…"
+	sed -i "s|<SIGNALING_COTURN_TLS_PORT>|$SIGNALING_COTURN_TLS_PORT|g" "$TMP_DIR_PATH"/signaling/*
 
 	log "Replacing '<SSL_CERT_PATH_RSA>' with '$SSL_CERT_PATH_RSA'…"
 	sed -i "s|<SSL_CERT_PATH_RSA>|$SSL_CERT_PATH_RSA|g" "$TMP_DIR_PATH"/signaling/*
@@ -703,13 +806,15 @@ function signaling_step4() {
 	log "Replacing '<DHPARAM_PATH>' with '$DHPARAM_PATH'…"
 	sed -i "s|<DHPARAM_PATH>|$DHPARAM_PATH|g" "$TMP_DIR_PATH"/signaling/*
 
-	EXTERN_IPv4=$(wget -4 https://ident.me -O - -o /dev/null || true)
-	log "Replacing '<SIGNALING_COTURN_EXTERN_IPV4>' with '$EXTERN_IPv4'…"
-	sed -i "s|<SIGNALING_COTURN_EXTERN_IPV4>|$EXTERN_IPv4|g" "$TMP_DIR_PATH"/signaling/*
+	if [ "$SHOULD_INSTALL_COTURN" = true ]; then
+		EXTERN_IPv4=$(wget -4 https://ident.me -O - -o /dev/null || true)
+		log "Replacing '<SIGNALING_COTURN_EXTERN_IPV4>' with '$EXTERN_IPv4'…"
+		sed -i "s|<SIGNALING_COTURN_EXTERN_IPV4>|$EXTERN_IPv4|g" "$TMP_DIR_PATH"/signaling/*
 
-	EXTERN_IPv6=$(wget -6 https://ident.me -O - -o /dev/null || true)
-	log "Replacing '<SIGNALING_COTURN_EXTERN_IPV6>' with '$EXTERN_IPv6'…"
-	sed -i "s|<SIGNALING_COTURN_EXTERN_IPV6>|$EXTERN_IPv6|g" "$TMP_DIR_PATH"/signaling/*
+		EXTERN_IPv6=$(wget -6 https://ident.me -O - -o /dev/null || true)
+		log "Replacing '<SIGNALING_COTURN_EXTERN_IPV6>' with '$EXTERN_IPv6'…"
+		sed -i "s|<SIGNALING_COTURN_EXTERN_IPV6>|$EXTERN_IPv6|g" "$TMP_DIR_PATH"/signaling/*
+	fi
 }
 
 function signaling_step5() {
@@ -733,7 +838,9 @@ function signaling_step5() {
 
 	deploy_file "$TMP_DIR_PATH"/signaling/signaling-server.conf /etc/nextcloud-spreed-signaling/server.conf || true
 
-	deploy_file "$TMP_DIR_PATH"/signaling/turnserver.conf /etc/turnserver.conf || true
+	if [ "$SHOULD_INSTALL_COTURN" = true ]; then
+		signaling_deploy_turn_configuration
+	fi
 }
 
 # arg: $1 is secret file path
@@ -749,12 +856,10 @@ function signaling_write_secrets_to_file() {
 	echo -e "" >>$1
 	echo -e "Allowed Nextcloud Servers:" >>$1
 	echo -e "$(printf '\t- https://%s\n' "${NEXTCLOUD_SERVER_FQDNS[@]}")" >>$1
-	echo -e "STUN server = $SERVER_FQDN:5349" >>$1
-	echo -e "TURN server:" >>$1
-	echo -e " - 'turn and turns'" >>$1
-	echo -e " - $SERVER_FQDN:5349" >>$1
-	echo -e " - $SIGNALING_TURN_STATIC_AUTH_SECRET" >>$1
-	echo -e " - 'udp & tcp'" >>$1
+	if [ "$SHOULD_INSTALL_COTURN" = true ]; then
+		echo -e "TURN/STUN server: $SIGNALING_COTURN_URL:$SIGNALING_COTURN_TLS_PORT" >>$1
+		echo -e "TURN secret:     $SIGNALING_TURN_STATIC_AUTH_SECRET" >>$1
+	fi
 	echo -e "High-performance backend:" >>$1
 	echo -e " - https://$SERVER_FQDN/standalone-signaling" >>$1
 
@@ -764,21 +869,36 @@ function signaling_write_secrets_to_file() {
 	done
 }
 
+function coturn_write_secrets_to_file() {
+	if is_dry_run; then
+		return 0
+	fi
+
+	echo -e "=== Coturn ===" >>$1
+	echo -e "TURN/STUN server: $SIGNALING_COTURN_URL:$SIGNALING_COTURN_TLS_PORT" >>$1
+	echo -e "Shared secret:   $SIGNALING_TURN_STATIC_AUTH_SECRET" >>$1
+	echo -e "Protocols:       udp & tcp" >>$1
+}
+
 function signaling_print_info() {
-	log "The services coturn janus nats-server and nextcloud-signaling-spreed" \
+	log "Signaling components (janus, nats-server, nextcloud-spreed-signaling)" \
 		"\ngot installed. To set it up, log into all of your Nextcloud" \
 		"\ninstances with an adminstrator account and install the Talk app." \
 		"\nThen navigate to Settings -> Administration -> Talk and put in the" \
 		"\nsettings down below.\n" \
 		"$(for NC_SERVER in "${NEXTCLOUD_SERVER_FQDNS[@]}"; do printf '\t- %shttps://%s%s\n' "${cyan}" "$NC_SERVER" "${blue}"; done)\n"
 
-	# Don't actually *log* passwords!
-	log "STUN server = ${cyan}$SERVER_FQDN:5349"
-	log "TURN server:"
-	log " - '${cyan}turn and turns${blue}'"
-	log " - ${cyan}turnserver+port${blue}: ${cyan}$SERVER_FQDN:5349"
-	echo -e " - secret: ${cyan}$SIGNALING_TURN_STATIC_AUTH_SECRET"
-	log " - '${cyan}udp & tcp${blue}'"
+	if [ "$SHOULD_INSTALL_COTURN" = true ]; then
+		log "STUN server = ${cyan}$SIGNALING_COTURN_URL:$SIGNALING_COTURN_TLS_PORT"
+		log "TURN server:"
+		log " - '${cyan}turn and turns${blue}'"
+		log " - ${cyan}turnserver+port${blue}: ${cyan}$SIGNALING_COTURN_URL:$SIGNALING_COTURN_TLS_PORT"
+		echo -e " - secret: ${cyan}$SIGNALING_TURN_STATIC_AUTH_SECRET"
+		log " - '${cyan}udp & tcp${blue}'"
+	else
+		log "TURN/STUN server: ${cyan}External (not installed in this run)${blue}"
+	fi
+
 	log "High-performance backend:"
 	log " - ${cyan}https://$SERVER_FQDN/standalone-signaling"
 
@@ -786,4 +906,16 @@ function signaling_print_info() {
 		NC_SERVER_UNDERSCORE=$(echo "$NC_SERVER" | sed "s/\./_/g")
 		echo -e " - ${cyan}$NC_SERVER${blue}\t-> ${cyan}${SIGNALING_NC_SERVER_SECRETS["$NC_SERVER_UNDERSCORE"]}"
 	done
+}
+
+function coturn_print_info() {
+	log "Coturn (TURN/STUN) was installed. Use these settings in Nextcloud Talk:"
+	log "TURN/STUN server: ${cyan}$SIGNALING_COTURN_URL:$SIGNALING_COTURN_TLS_PORT"
+	log "Secret:           ${cyan}$SIGNALING_TURN_STATIC_AUTH_SECRET"
+	log "Protocols:        ${cyan}udp & tcp${blue}"
+	log "Auth type:        '${cyan}turn and turns${blue}'"
+
+	if [ "$SIGNALING_COTURN_TLS_PORT" -lt 1024 ]; then
+		log "${yellow}Reminder:${blue} Port $SIGNALING_COTURN_TLS_PORT membutuhkan CAP_NET_BIND_SERVICE. Skrip mencoba setcap pada binary turnserver."
+	fi
 }

@@ -367,7 +367,8 @@ function show_dialogs() {
 		SIGNALING_COTURN_TLS_PORT=$(
 			whiptail --title "TURN TLS port" \
 				--inputbox "Port TLS untuk Coturn (TURN/TLS/DTLS). $(
-				)Default 5349. Jika pilih 443, pastikan tidak bentrok dengan nginx/HTTPS $(
+				)Default 5349. Jika HPB tanpa Coturn, isi port TURN eksternal (umumnya 5349). $(
+				)Jika pilih 443, pastikan tidak bentrok dengan nginx/HTTPS $(
 				)dan service memiliki izin CAP_NET_BIND_SERVICE. $port_warning" \
 				13 75 "5349" 3>&1 1>&2 2>&3
 		)

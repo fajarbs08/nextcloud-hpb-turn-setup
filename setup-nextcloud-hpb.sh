@@ -96,12 +96,13 @@ function show_dialogs() {
 		fi
 
 		SERVER_FQDN=$(
-			whiptail --title "High-Performance Backend Server Domain" \
-				--inputbox "Please enter your high performance backend $(
-				)server's domain name here. (Omit http(s)://!).\n\n$(
-				)Also please note that this domain should already exist in DNS $(
-				)or else SSL certificate creation will fail!" \
-				12 65 "nc-workhorse.example.org" 3>&1 1>&2 2>&3
+			whiptail --title "Server Domain" \
+				--inputbox "Masukkan FQDN server untuk layanan yang Anda pilih. $(
+				)Jika memilih HPB: masukkan domain HPB.\n$(
+				)Jika memilih Coturn saja: masukkan domain server TURN.\n$(
+				)(Tanpa http(s)://, hanya nama domain) $(
+				)\n\nPastikan domain sudah ada di DNS agar pembuatan sertifikat SSL berhasil!" \
+				14 70 "hpb.example.org" 3>&1 1>&2 2>&3
 		)
 	fi
 	# Filter out HTTPS:// or HTTP://

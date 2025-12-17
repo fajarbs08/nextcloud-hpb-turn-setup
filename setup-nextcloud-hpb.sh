@@ -812,17 +812,18 @@ function main() {
 	log "Moving config files into '$TMP_DIR_PATH'."
 	cp -rv data/* "$TMP_DIR_PATH" 2>&1 | tee -a $LOGFILE_PATH
 
+	log "Cleaning old /etc/hosts entries for '$SERVER_FQDN' and hostname."
+	if ! is_dry_run; then
+		sed -i "/[[:space:]]$SERVER_FQDN/d" /etc/hosts
+		sed -i "/[[:space:]]$(hostname)/d" /etc/hosts
+	fi
+
 	if [ -n "$EXTERN_IPv4" ]; then
 		entry="$EXTERN_IPv4 $SERVER_FQDN $(hostname)"
-		log "Deploying '$entry' in /etc/hosts (overwriting old entries for this host)."
-		if ! is_dry_run; then
-			# Remove old entries for SERVER_FQDN/hostname to avoid localhost overrides.
-			sed -i "/[[:space:]]$SERVER_FQDN/d" /etc/hosts
-			sed -i "/[[:space:]]$(hostname)/d" /etc/hosts
-			echo "$entry" >>/etc/hosts
-		fi
+		log "Deploying '$entry' in /etc/hosts."
+		is_dry_run || echo "$entry" >>/etc/hosts
 	else
-		log "Skipping /etc/hosts entry because EXTERN_IPv4 is empty; using DNS as-is."
+		log "Skipping /etc/hosts addition because EXTERN_IPv4 is empty; relying on DNS."
 	fi
 
 	scripts=('src/setup-ufw.sh' 'src/setup-collabora.sh'

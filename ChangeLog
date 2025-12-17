@@ -1,5 +1,10 @@
 2025-12-17 Fajar Budi Setiawan
 
+    * VERSION: Bump version to 1.5.4
+    * setup-nextcloud-hpb.sh: Stop writing 127.0.1.1 overrides; only add /etc/hosts entry when EXTERN_IPv4 is set and remove old entries for that host.
+
+2025-12-17 Fajar Budi Setiawan
+
     * VERSION: Bump version to 1.5.3
     * setup-signaling.sh: Write detected/public TURN IPs (IPv4/IPv6) into secrets file for verification.
 

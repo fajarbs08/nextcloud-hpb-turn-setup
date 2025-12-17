@@ -812,12 +812,18 @@ function main() {
 	log "Moving config files into '$TMP_DIR_PATH'."
 	cp -rv data/* "$TMP_DIR_PATH" 2>&1 | tee -a $LOGFILE_PATH
 
-	log "Deleting every '127.0.1.1' entry in /etc/hosts."
-	is_dry_run || sed -i "/127.0.1.1/d" /etc/hosts
-
-	entry="127.0.1.1 $SERVER_FQDN $(hostname)"
-	log "Deploying '$entry' in /etc/hosts."
-	is_dry_run || echo "$entry" >>/etc/hosts
+	if [ -n "$EXTERN_IPv4" ]; then
+		entry="$EXTERN_IPv4 $SERVER_FQDN $(hostname)"
+		log "Deploying '$entry' in /etc/hosts (overwriting old entries for this host)."
+		if ! is_dry_run; then
+			# Remove old entries for SERVER_FQDN/hostname to avoid localhost overrides.
+			sed -i "/[[:space:]]$SERVER_FQDN/d" /etc/hosts
+			sed -i "/[[:space:]]$(hostname)/d" /etc/hosts
+			echo "$entry" >>/etc/hosts
+		fi
+	else
+		log "Skipping /etc/hosts entry because EXTERN_IPv4 is empty; using DNS as-is."
+	fi
 
 	scripts=('src/setup-ufw.sh' 'src/setup-collabora.sh'
 		'src/setup-signaling.sh' 'src/setup-nginx.sh' 'src/setup-certbot.sh'

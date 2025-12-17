@@ -34,17 +34,17 @@ UNATTENDED_INSTALL=false
 #DHPARAM_PATH=""
 
 # Collabora (Gets asked anyway, except unattended install.)
-SHOULD_INSTALL_COLLABORA=true
+SHOULD_INSTALL_COLLABORA=false
 
 # Signaling (Gets asked anyway, except unattended install.)
-SHOULD_INSTALL_SIGNALING=true
-SHOULD_INSTALL_COTURN=true
+SHOULD_INSTALL_SIGNALING=false
+SHOULD_INSTALL_COTURN=false
 
-SHOULD_INSTALL_UFW=true
-SHOULD_INSTALL_NGINX=true
-SHOULD_INSTALL_CERTBOT=true
-SHOULD_INSTALL_UNATTENDEDUPGRADES=true
-SHOULD_INSTALL_MSMTP=true
+SHOULD_INSTALL_UFW=false
+SHOULD_INSTALL_NGINX=false
+SHOULD_INSTALL_CERTBOT=false
+SHOULD_INSTALL_UNATTENDEDUPGRADES=false
+SHOULD_INSTALL_MSMTP=false
 
 # Logfile get created if UNATTENDED_INSTALL is true.
 # Leave empty, if you wish that the user will be asked about this.

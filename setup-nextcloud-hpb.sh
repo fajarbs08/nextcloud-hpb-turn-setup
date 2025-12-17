@@ -330,23 +330,22 @@ function show_dialogs() {
 
 	# TURN static secret (shared between Coturn & HPB)
 	if { [ "$SHOULD_INSTALL_SIGNALING" = true ] || [ "$SHOULD_INSTALL_COTURN" = true ]; } && [ "$SIGNALING_TURN_STATIC_AUTH_SECRET" = "" ]; then
-		# Jika memasang Coturn, kita bisa langsung generate otomatis dan simpan di secrets.
 		if [ "$SHOULD_INSTALL_COTURN" = true ] && [ "$UNATTENDED_INSTALL" = false ]; then
+			# Coturn dipasang di host ini: boleh generate otomatis.
 			SIGNALING_TURN_STATIC_AUTH_SECRET="$(openssl rand -hex 32)"
 			log "Generated TURN static secret for Coturn (disimpan ke secrets file, tidak ditampilkan)."
 		else
+			# HPB saja (atau unattended): wajib isi manual (copy dari server Coturn).
 			if [ "$UNATTENDED_INSTALL" = true ]; then
-				log_err "Missing SIGNALING_TURN_STATIC_AUTH_SECRET for unattended install!"
+				log_err "Missing SIGNALING_TURN_STATIC_AUTH_SECRET for unattended install! Isi secret TURN dari server Coturn."
 				exit 1
 			fi
 
-			local default_turn_secret
-			default_turn_secret=$(openssl rand -hex 32)
 			SIGNALING_TURN_STATIC_AUTH_SECRET=$(
 				whiptail --title "TURN shared secret" \
-					--inputbox "Masukkan shared secret untuk TURN (Coturn/HPB). $(
-					)Gunakan nilai yang sama di semua server yang berbagi TURN." \
-					12 70 "$default_turn_secret" 3>&1 1>&2 2>&3
+					--inputbox "Masukkan shared secret TURN (sama dengan di server Coturn). $(
+					)Tidak ada default; copy dari server Coturn." \
+					12 70 "" 3>&1 1>&2 2>&3
 			)
 			log "Using provided TURN static secret (value disembunyikan dari log)."
 		fi

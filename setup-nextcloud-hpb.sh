@@ -459,15 +459,15 @@ function generate_dhparam_file() {
 	fi
 
 	if [ -s "$DHPARAM_PATH" ]; then
-		# Rebuilding dhparam file.
-		log "Removing old dhparam file at '$DHPARAM_PATH'."
-		rm -fv "$DHPARAM_PATH" 2>&1 | tee -a "$LOGFILE_PATH"
+		log "Found existing dhparam file at '$DHPARAM_PATH', skipping regeneration."
+		BUILT_DHPARAM_FILE="true"
+		return 0
 	fi
 
-	log "Generating new dhparam file…"
+	log "Generating new dhparam file (2048 bit)…"
 	is_dry_run || mkdir -p "$(dirname $DHPARAM_PATH)"
 	is_dry_run || touch "$DHPARAM_PATH"
-	is_dry_run || openssl dhparam -dsaparam -out "$DHPARAM_PATH" 4096
+	is_dry_run || openssl dhparam -dsaparam -out "$DHPARAM_PATH" 2048
 	is_dry_run || chmod 644 "$DHPARAM_PATH"
 
 	BUILT_DHPARAM_FILE="true"

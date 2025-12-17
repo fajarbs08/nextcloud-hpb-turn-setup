@@ -1,5 +1,10 @@
 2025-12-17 Fajar Budi Setiawan
 
+    * VERSION: Bump version to 1.4.2
+    * setup-nextcloud-hpb.sh: Skip regenerating dhparam if it exists; generate 2048-bit for faster setup.
+
+2025-12-17 Fajar Budi Setiawan
+
     * VERSION: Bump version to 1.4.1
     * setup-certbot.sh: Use standalone authenticator when nginx is absent; avoid installing nginx plugin in that case.
     * setup-nextcloud-hpb.sh: Clarify SERVER_FQDN prompt for HPB vs TURN; Coturn-only option installs msmtp and unattended-upgrades.

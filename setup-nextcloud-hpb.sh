@@ -294,23 +294,18 @@ function show_dialogs() {
 
 	# Public IPs (manual input)
 	if { [ "$SHOULD_INSTALL_SIGNALING" = true ] || [ "$SHOULD_INSTALL_COTURN" = true ]; } && [ "$EXTERN_IPv4" = "" ]; then
-		if [ "$UNATTENDED_INSTALL" = true ]; then
-			log_err "Can't continue since this is a non-interactive installation and I'm missing EXTERN_IPv4!"
-			exit 1
+		if [ "$UNATTENDED_INSTALL" != true ]; then
+			EXTERN_IPv4=$(
+				whiptail --title "Public IPv4" \
+					--inputbox "Masukkan IPv4 publik server ini (untuk Coturn).\nKosongkan jika tidak ada IPv4 publik." \
+					10 70 "" 3>&1 1>&2 2>&3
+			)
 		fi
-
-		EXTERN_IPv4=$(
-			whiptail --title "Public IPv4" \
-				--inputbox "Masukkan IPv4 publik server ini (untuk Coturn).\nKosongkan jika tidak ada IPv4 publik." \
-				10 70 "" 3>&1 1>&2 2>&3
-		)
 	fi
 	log "Using '$EXTERN_IPv4' for EXTERN_IPv4".
 
 	if { [ "$SHOULD_INSTALL_SIGNALING" = true ] || [ "$SHOULD_INSTALL_COTURN" = true ]; } && [ "$EXTERN_IPv6" = "" ]; then
-		if [ "$UNATTENDED_INSTALL" = true ]; then
-			EXTERN_IPv6=""
-		else
+		if [ "$UNATTENDED_INSTALL" != true ]; then
 			EXTERN_IPv6=$(
 				whiptail --title "Public IPv6 (opsional)" \
 					--inputbox "Masukkan IPv6 publik server ini (opsional). Kosongkan jika tidak ada IPv6." \

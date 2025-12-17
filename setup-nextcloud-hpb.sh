@@ -328,6 +328,25 @@ function show_dialogs() {
 	fi
 	log "Using '$EXTERN_IPv6' for EXTERN_IPv6".
 
+	# TURN endpoint (when using external TURN with HPB-only)
+	if [ "$SIGNALING_COTURN_URL" = "" ]; then
+		if [ "$SHOULD_INSTALL_COTURN" = true ]; then
+			SIGNALING_COTURN_URL="$SERVER_FQDN"
+		else
+			if [ "$UNATTENDED_INSTALL" = true ]; then
+				log_err "Missing SIGNALING_COTURN_URL for unattended install! Isi FQDN TURN eksternal."
+				exit 1
+			fi
+
+			SIGNALING_COTURN_URL=$(
+				whiptail --title "TURN server FQDN" \
+					--inputbox "Masukkan FQDN server TURN (tanpa http/https) yang akan dipakai HPB.\nContoh: turn.example.org" \
+					12 70 "turn.example.org" 3>&1 1>&2 2>&3
+			)
+		fi
+	fi
+	log "Using '$SIGNALING_COTURN_URL' for SIGNALING_COTURN_URL".
+
 	# TURN static secret (shared between Coturn & HPB)
 	if { [ "$SHOULD_INSTALL_SIGNALING" = true ] || [ "$SHOULD_INSTALL_COTURN" = true ]; } && [ "$SIGNALING_TURN_STATIC_AUTH_SECRET" = "" ]; then
 		if [ "$SHOULD_INSTALL_COTURN" = true ] && [ "$UNATTENDED_INSTALL" = false ]; then

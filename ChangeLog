@@ -1,5 +1,10 @@
 2025-12-17 Fajar Budi Setiawan
 
+    * VERSION: Bump version to 1.5.8
+    * setup-nextcloud-hpb.sh: Prompt for TURN FQDN when installing HPB without Coturn; default to SERVER_FQDN only if Coturn is installed locally.
+
+2025-12-17 Fajar Budi Setiawan
+
     * VERSION: Bump version to 1.5.7
     * setup-nextcloud-hpb.sh: For HPB-only installs, TURN secret must be entered manually (copied from Coturn); no auto-generated default.
 

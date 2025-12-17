@@ -862,6 +862,9 @@ function signaling_write_secrets_to_file() {
 	if [ "$SHOULD_INSTALL_COTURN" = true ]; then
 		echo -e "TURN/STUN server: $SIGNALING_COTURN_URL:$SIGNALING_COTURN_TLS_PORT" >>$1
 		echo -e "TURN secret:     $SIGNALING_TURN_STATIC_AUTH_SECRET" >>$1
+		if [[ -n "$EXTERN_IPv4" || -n "$EXTERN_IPv6" ]]; then
+			echo -e "TURN Public IPs:  IPv4=${EXTERN_IPv4:-N/A}  IPv6=${EXTERN_IPv6:-N/A}" >>$1
+		fi
 	fi
 	echo -e "High-performance backend:" >>$1
 	echo -e " - https://$SERVER_FQDN/standalone-signaling" >>$1
@@ -880,6 +883,9 @@ function coturn_write_secrets_to_file() {
 	echo -e "=== Coturn ===" >>$1
 	echo -e "TURN/STUN server: $SIGNALING_COTURN_URL:$SIGNALING_COTURN_TLS_PORT" >>$1
 	echo -e "Shared secret:   $SIGNALING_TURN_STATIC_AUTH_SECRET" >>$1
+	if [[ -n "$EXTERN_IPv4" || -n "$EXTERN_IPv6" ]]; then
+		echo -e "Public IPs:      IPv4=${EXTERN_IPv4:-N/A}  IPv6=${EXTERN_IPv6:-N/A}" >>$1
+	fi
 	echo -e "Protocols:       udp & tcp" >>$1
 }
 

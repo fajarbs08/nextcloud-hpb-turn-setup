@@ -1,5 +1,10 @@
 2025-12-17 Fajar Budi Setiawan
 
+    * VERSION: Bump version to 1.5.3
+    * setup-signaling.sh: Write detected/public TURN IPs (IPv4/IPv6) into secrets file for verification.
+
+2025-12-17 Fajar Budi Setiawan
+
     * VERSION: Bump version to 1.5.2
     * setup-nextcloud-hpb.sh: Auto-detect public IPs via ifconfig.co when EXTERN_IP is empty (interactive prompt optional).
 

@@ -130,9 +130,6 @@ function signaling_prepare_turn_configuration() {
 	is_dry_run || chown -R turnserver:turnserver "$COTURN_DIR"
 	is_dry_run || chmod -R 740 "$COTURN_DIR"
 
-	EXTERN_IPv4=$(wget -4 https://ident.me -O - -o /dev/null || true)
-	EXTERN_IPv6=$(wget -6 https://ident.me -O - -o /dev/null || true)
-
 	log "Replacing Coturn placeholders in templates…"
 	sed -i "s|<SIGNALING_TURN_STATIC_AUTH_SECRET>|$SIGNALING_TURN_STATIC_AUTH_SECRET|g" "$TMP_DIR_PATH"/signaling/turnserver.conf
 	sed -i "s|<SIGNALING_COTURN_URL>|$SIGNALING_COTURN_URL|g" "$TMP_DIR_PATH"/signaling/turnserver.conf

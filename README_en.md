@@ -1,6 +1,7 @@
 <p align="center">
-  <a href="https://github.com/sunweaver/nextcloud-high-performance-backend-setup/blob/main/README.md">Deutsch</a> |
-  <span>English</span>
+  <a href="README.md">Deutsch</a> |
+  <span>English</span> |
+  <a href="README_id.md">Bahasa Indonesia</a>
 </p>
 
 # Easy setup for Nextcloud High performance backend, Signaling & Collabora Office for Debian 13 (Trixie)
@@ -74,4 +75,4 @@ Mirco Rohloff
 
 ### Credits (modifications)
 
-- Install options, Coturn port prompt, firewall tweaks: **promax**.
+- Install options, Coturn port prompt, firewall tweaks: **Fajar Budi Setiawan**.

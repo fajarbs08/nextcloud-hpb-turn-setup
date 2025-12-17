@@ -1,7 +1,7 @@
 <p align="center">
   <span>Deutsch</span> |
-  <a href="https://github.com/sunweaver/nextcloud-high-performance-backend-setup/blob/main/README_en.md">English</a> |
-  <a href="#bahasa-indonesia">Bahasa Indonesia</a>
+  <a href="README_en.md">English</a> |
+  <a href="README_id.md">Bahasa Indonesia</a>
 </p>
 
 # Einfaches Setup für Nextcloud Hochleistungsbackend, Signaling & Collabora Office für Debian 13 (Trixie)
@@ -88,8 +88,8 @@ Fitur tambahan:
 
 ### Kredit
 
-- Modifikasi opsi instalasi, input port Coturn, dan penyesuaian firewall: **promax**.
+- Modifikasi opsi instalasi, input port Coturn, dan penyesuaian firewall: **Fajar Budi Setiawan**.
 
 ### Credits / Credits (Deutsch)
 
-- Erweiterungen (Installationsoptionen, Coturn-Port-Dialog, Firewall-Anpassungen): **promax**.
+- Erweiterungen (Installationsoptionen, Coturn-Port-Dialog, Firewall-Anpassungen): **Fajar Budi Setiawan**.

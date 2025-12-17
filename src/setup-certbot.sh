@@ -3,6 +3,13 @@
 # Warning: recursive function
 # $1 can enable staging certificates arguments for certbot if $1 = "true".
 function run_certbot_command() {
+	# Timeout (seconds) for certbot invocations to avoid hanging forever.
+	CERTBOT_TIMEOUT="${CERTBOT_TIMEOUT:-300}"
+	certbot_runner=(certbot)
+	if command -v timeout >/dev/null 2>&1; then
+		certbot_runner=(timeout "$CERTBOT_TIMEOUT" certbot)
+	fi
+
 	arg_dry_run=""
 	if is_dry_run; then
 		arg_dry_run="--dry-run"
@@ -45,7 +52,7 @@ function run_certbot_command() {
 
 	log "Executing Certbot using arguments: '${certbot_args[@]}'…"
 
-	if ! certbot "${certbot_args[@]}" |& tee -a $LOGFILE_PATH; then
+	if ! "${certbot_runner[@]}" "${certbot_args[@]}" |& tee -a $LOGFILE_PATH; then
 		# Checking if Certbot reported rate limit error
 		# Let the user decide if they want staging certificates (for testing
 		# purposes for example).
@@ -75,7 +82,7 @@ function run_certbot_command() {
 
 	log "Executing Certbot using arguments: '${certbot_args[@]}'…"
 
-	if ! certbot "${certbot_args[@]}" |& tee -a $LOGFILE_PATH; then
+	if ! "${certbot_runner[@]}" "${certbot_args[@]}" |& tee -a $LOGFILE_PATH; then
 		# Checking if Certbot reported rate limit error
 		# Let the user decide if they want staging certificates (for testing
 		# purposes for example).
@@ -101,7 +108,7 @@ function run_certbot_command() {
 
 	log "Executing Certbot using arguments: '${certbot_args[@]}'…"
 
-	if certbot "${certbot_args[@]}" |& tee -a $LOGFILE_PATH; then
+	if "${certbot_runner[@]}" "${certbot_args[@]}" |& tee -a $LOGFILE_PATH; then
 		return 0
 	else
 		# Checking if Certbot reported rate limit error

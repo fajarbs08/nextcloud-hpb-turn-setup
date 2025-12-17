@@ -1,5 +1,10 @@
 2025-12-17 Fajar Budi Setiawan
 
+    * VERSION: Bump version to 1.4.3
+    * setup-certbot.sh: Add timeout wrapper (default 300s) around certbot invocations to avoid hangs; reuse standalone/nginx logic.
+
+2025-12-17 Fajar Budi Setiawan
+
     * VERSION: Bump version to 1.4.2
     * setup-nextcloud-hpb.sh: Skip regenerating dhparam if it exists; generate 2048-bit for faster setup.
 

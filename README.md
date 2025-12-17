@@ -72,7 +72,7 @@ Ich möchte mich hier noch bei den drei Firmen Nextcloud GmbH, Struktur AG sowie
 
 Mirco Rohloff
 
-## Bahasa Indonesia {#bahasa-indonesia}
+## Bahasa Indonesia
 
 Skrip ini memasang backend kinerja tinggi Nextcloud (HPB), Coturn, Signaling, dan Collabora untuk Debian. Sudah tersedia pilihan instalasi interaktif dengan empat opsi utama:
 

@@ -135,7 +135,11 @@ function install_certbot() {
 
 function certbot_step1() {
 	log "\n${green}Step 1: Installing Certbot packages"
-	packages_to_install=(python3-certbot-nginx certbot ssl-cert)
+	if [ "$SHOULD_INSTALL_NGINX" = true ]; then
+		packages_to_install=(python3-certbot-nginx certbot ssl-cert)
+	else
+		packages_to_install=(certbot ssl-cert)
+	fi
 	if ! is_dry_run; then
 		if [ "$UNATTENDED_INSTALL" == true ]; then
 			log "Trying unattended install for Certbot."

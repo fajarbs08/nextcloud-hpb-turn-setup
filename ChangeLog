@@ -1,3 +1,9 @@
+2025-12-17 Fajar Budi Setiawan
+
+    * VERSION: Bump version to 1.4.1
+    * setup-certbot.sh: Use standalone authenticator when nginx is absent; avoid installing nginx plugin in that case.
+    * setup-nextcloud-hpb.sh: Clarify SERVER_FQDN prompt for HPB vs TURN; Coturn-only option installs msmtp and unattended-upgrades.
+
 2025-10-27 Fajar Budi Setiawan
 
     * VERSION: Bump version to 1.4.0

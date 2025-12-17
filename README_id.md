@@ -7,7 +7,7 @@ Skrip ini menyiapkan backend Nextcloud Talk (HPB), Coturn, dan Collabora di Debi
 ## Opsi instalasi (dalam dialog)
 - Collabora (dengan nginx/certbot/ufw).
 - HPB signaling (janus, nats, nextcloud-spreed-signaling) + nginx/certbot/ufw.
-- Coturn + certbot + ufw (tanpa nginx; port 443 bisa dipakai TURN).
+- Coturn + certbot + ufw + unattended-upgrades + msmtp (tanpa nginx; port 443 bisa dipakai TURN).
 - HPB signaling + Coturn (stack lengkap dengan nginx/certbot/ufw).
 
 ## Fitur penting

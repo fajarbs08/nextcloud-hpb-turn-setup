@@ -26,7 +26,7 @@ Sie werden bei der Installation durch 8 Dialoge geführt und danach werden die P
 
 - Collabora (inkl. nginx/certbot/ufw)
 - HPB Signaling (janus, nats, nextcloud-spreed-signaling) + nginx/certbot/ufw
-- Coturn + certbot + ufw (ohne nginx, Port 443 kann für TURN genutzt werden)
+- Coturn + certbot + ufw + unattended-upgrades + msmtp (ohne nginx, Port 443 kann für TURN genutzt werden)
 - HPB Signaling + Coturn (gesamter Talk-Stack, inkl. nginx/certbot/ufw)
 
 Zusätze: Eingabe port TURN (Standard 5349, 443 möglich; bei 443 auf Kollision mit nginx achten, CAP_NET_BIND_SERVICE wird gesetzt), Secret TURN kann automatisch erzeugt und in der Secrets-Datei gesichert werden, alle Werte werden am Ende ausgegeben.

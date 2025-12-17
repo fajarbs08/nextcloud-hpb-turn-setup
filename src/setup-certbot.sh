@@ -31,8 +31,13 @@ function run_certbot_command() {
 
 	error_title_ratelimited="LetsEncrypt rate limit reached!"
 
+	certbot_authenticator=(--nginx)
+	if [ "$SHOULD_INSTALL_NGINX" != true ]; then
+		certbot_authenticator=(--standalone --preferred-challenges http-01 --http-01-port 80)
+	fi
+
 	# RSA certificate
-	certbot_args=(certonly --nginx $arg_staging $arg_interactive $arg_dry_run
+	certbot_args=(certonly "${certbot_authenticator[@]}" $arg_staging $arg_interactive $arg_dry_run
 		--key-path "$SSL_CERT_KEY_PATH_RSA" --domains "$SERVER_FQDN"
 		--fullchain-path "$SSL_CERT_PATH_RSA" --email "$EMAIL_USER_ADDRESS"
 		--rsa-key-size 4096 --cert-name "$SERVER_FQDN"-rsa
@@ -62,7 +67,7 @@ function run_certbot_command() {
 	fi
 
 	# ECDSA certificate
-	certbot_args=(certonly --nginx $arg_staging $arg_interactive $arg_dry_run
+	certbot_args=(certonly "${certbot_authenticator[@]}" $arg_staging $arg_interactive $arg_dry_run
 		--key-path "$SSL_CERT_KEY_PATH_ECDSA" --domains "$SERVER_FQDN"
 		--fullchain-path "$SSL_CERT_PATH_ECDSA" --email "$EMAIL_USER_ADDRESS"
 		--key-type ecdsa --cert-name "$SERVER_FQDN"-ecdsa
@@ -153,13 +158,17 @@ function certbot_step2() {
 		log_err "Something went wrong while starting Certbot."
 
 		if [ "$UNATTENDED_INSTALL" != true ]; then
-			log_err "Maybe the error is in the nextcloud-hpb.conf" \
-			        "file (please read the error message above).\n"
-			read -p "Do you wish to delete this file:$(
-			)'/etc/nginx/sites-enabled/nextcloud-hbp.conf'? [YyNn]" -n 1 -r && echo
-			if [[ $REPLY =~ ^[YyJj]$ ]]; then
-				rm -v "/etc/nginx/sites-enabled/nextcloud-hpb.conf" |& tee -a $LOGFILE_PATH || true
-				log "File got deleted. Please try again now."
+			if [ "$SHOULD_INSTALL_NGINX" = true ]; then
+				log_err "Maybe the error is in the nextcloud-hpb.conf" \
+				        "file (please read the error message above).\n"
+				read -p "Do you wish to delete this file:$(
+				)'/etc/nginx/sites-enabled/nextcloud-hbp.conf'? [YyNn]" -n 1 -r && echo
+				if [[ $REPLY =~ ^[YyJj]$ ]]; then
+					rm -v "/etc/nginx/sites-enabled/nextcloud-hpb.conf" |& tee -a $LOGFILE_PATH || true
+					log "File got deleted. Please try again now."
+				fi
+			else
+				log_err "Certbot (standalone) failed. Please ensure port 80 is reachable from the internet and no service is binding it."
 			fi
 		fi
 

@@ -714,10 +714,12 @@ function main() {
 					SHOULD_INSTALL_MSMTP=true
 					;;
 				"3")
-					log "Coturn (certbot, ufw) will be installed."
+					log "Coturn (certbot, ufw, unattended-upgrades, msmtp) will be installed."
 					SHOULD_INSTALL_UFW=true
 					SHOULD_INSTALL_COTURN=true
 					SHOULD_INSTALL_CERTBOT=true
+					SHOULD_INSTALL_UNATTENDEDUPGRADES=true
+					SHOULD_INSTALL_MSMTP=true
 					;;
 				"4")
 					log "HPB signaling + Coturn (certbot, nginx, ufw) will be installed."

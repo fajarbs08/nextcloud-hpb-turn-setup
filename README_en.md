@@ -27,7 +27,7 @@ You are guided by 8 dialogues during the installation and then the packages are 
 
 - Collabora (includes nginx/certbot/ufw)
 - HPB signaling (janus, nats, nextcloud-spreed-signaling) + nginx/certbot/ufw
-- Coturn + certbot + ufw (no nginx, so port 443 can be used for TURN)
+- Coturn + certbot + ufw + unattended-upgrades + msmtp (no nginx, so port 443 can be used for TURN)
 - HPB signaling + Coturn (full Talk stack, includes nginx/certbot/ufw)
 
 Extras: TURN TLS port prompt (default 5349; 443 possible—avoid clashes with nginx, CAP_NET_BIND_SERVICE is applied), TURN secret can be generated automatically and saved to the secrets file, all values are printed at the end.

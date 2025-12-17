@@ -1,5 +1,10 @@
 2025-12-17 Fajar Budi Setiawan
 
+    * VERSION: Bump version to 1.5.6
+    * setup-certbot.sh: Force non-interactive certbot (--non-interactive --agree-tos --no-eff-email) to avoid blocking prompts.
+
+2025-12-17 Fajar Budi Setiawan
+
     * VERSION: Bump version to 1.5.5
     * setup-nextcloud-hpb.sh: Always remove old /etc/hosts entries for the host; only add new entry when EXTERN_IPv4 is known (avoid 127.0.1.1 overrides).
 

@@ -15,12 +15,8 @@ function run_certbot_command() {
 		arg_dry_run="--dry-run"
 	fi
 
-	arg_interactive=""
-	if [ "$UNATTENDED_INSTALL" == true ]; then
-		arg_interactive="--non-interactive --agree-tos"
-	else
-		arg_interactive="--force-interactive $CERTBOT_AGREE_TOS"
-	fi
+	# Run certbot non-interactively to avoid blocking prompts.
+	arg_interactive="--non-interactive --agree-tos --no-eff-email $CERTBOT_AGREE_TOS"
 
 	arg_staging=""
 	if [ "$1" == "true" ]; then

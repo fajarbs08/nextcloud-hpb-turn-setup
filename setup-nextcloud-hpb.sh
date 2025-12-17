@@ -254,17 +254,23 @@ function show_dialogs() {
 	log "Using '$EMAIL_USER_USERNAME' for EMAIL_USER_USERNAME".
 
 	if [ "$EMAIL_SERVER_HOST" = "" ]; then
-		if [ "$UNATTENDED_INSTALL" = true ]; then
-			log_err "Can't continue since this is a non-interactive installation and I'm" \
-			        "missing EMAIL_SERVER_HOST!"
-			exit 1
+		default_smtp_host="mail.example.org"
+		if [[ "$EMAIL_USER_ADDRESS" == *"@"* ]]; then
+			domain_part="${EMAIL_USER_ADDRESS#*@}"
+			if [[ -n "$domain_part" ]]; then
+				default_smtp_host="mail.$domain_part"
+			fi
 		fi
 
-		EMAIL_SERVER_HOST=$(
-			whiptail --title "E-Mail SMTP host" \
-				--inputbox "Enter the host address on which the SMTP server is reachable." \
-				10 65 "mail.example.org" 3>&1 1>&2 2>&3
-		)
+		if [ "$UNATTENDED_INSTALL" = true ]; then
+			EMAIL_SERVER_HOST="$default_smtp_host"
+		else
+			EMAIL_SERVER_HOST=$(
+				whiptail --title "E-Mail SMTP host" \
+					--inputbox "Enter the host address on which the SMTP server is reachable." \
+					10 65 "$default_smtp_host" 3>&1 1>&2 2>&3
+			)
+		fi
 	fi
 	log "Using '$EMAIL_SERVER_HOST' for EMAIL_SERVER_HOST".
 

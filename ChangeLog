@@ -1,5 +1,10 @@
 2025-12-17 Fajar Budi Setiawan
 
+    * VERSION: Bump version to 1.4.7
+    * setup-nextcloud-hpb.sh: Auto-suggest SMTP host from email domain (e.g., mail.example.org), use it by default in unattended installs.
+
+2025-12-17 Fajar Budi Setiawan
+
     * VERSION: Bump version to 1.4.6
     * setup-signaling.sh: Use ifconfig.co (with timeout/tries) for public IP detection instead of ident.me.
 

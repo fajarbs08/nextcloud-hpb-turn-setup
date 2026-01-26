@@ -101,6 +101,16 @@ function run_with_progress() {
 	return $exit_code
 }
 
+# Ensure a system user/group exists (best effort).
+function ensure_system_user() {
+	local user="$1"
+	if id -u "$user" >/dev/null 2>&1; then
+		return 0
+	fi
+	log "Creating system user '$user'…"
+	adduser --system --group "$user" >/dev/null 2>&1 || log_err "Failed to create system user '$user'."
+}
+
 function signaling_configure_backports() {
 	if [ "$DEBIAN_VERSION_MAJOR" = "12" ] ; then
 		log "Enabling bookworm-backports..."
@@ -875,6 +885,7 @@ function signaling_step5() {
 	# Ensure service logs are written to /var/log
 	if ! is_dry_run; then
 		touch /var/log/nats-server.log
+		ensure_system_user nats
 		if id -u nats >/dev/null 2>&1; then
 			chown nats:nats /var/log/nats-server.log
 			chmod 640 /var/log/nats-server.log
@@ -883,6 +894,7 @@ function signaling_step5() {
 		fi
 
 		touch /var/log/janus.log
+		ensure_system_user janus
 		if id -u janus >/dev/null 2>&1; then
 			chown janus:janus /var/log/janus.log
 			chmod 640 /var/log/janus.log

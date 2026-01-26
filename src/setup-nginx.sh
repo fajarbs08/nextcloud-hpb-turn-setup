@@ -108,7 +108,21 @@ function nginx_step2() {
 	else
 		allow_block=$'    allow all;\n'
 	fi
-	sed -i "s|<HPB_STATUS_ALLOW_BLOCK>|$allow_block|g" "$TMP_DIR_PATH"/nginx/nextcloud-hpb.conf
+	if ! is_dry_run; then
+		NGINX_CONF_PATH="$TMP_DIR_PATH/nginx/nextcloud-hpb.conf"
+		ALLOW_BLOCK="$allow_block" python3 - <<'PY'
+import os
+path = os.environ["NGINX_CONF_PATH"]
+block = os.environ["ALLOW_BLOCK"]
+with open(path, "r", encoding="utf-8") as f:
+    data = f.read()
+data = data.replace("<HPB_STATUS_ALLOW_BLOCK>", block)
+with open(path, "w", encoding="utf-8") as f:
+    f.write(data)
+PY
+	else
+		log "Would replace '<HPB_STATUS_ALLOW_BLOCK>' in nginx config."
+	fi
 }
 
 function nginx_step3() {

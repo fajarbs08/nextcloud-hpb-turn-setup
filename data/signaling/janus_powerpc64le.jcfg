@@ -397,7 +397,7 @@ plugins: {
 # to identify the transports to disable. By default all available
 # transports are enabled and loaded at startup.
 transports: {
-	#disable = "libjanus_rabbitmq.so"
+	disable = "libjanus_pfunix.so,libjanus_mqtt.so"
 }
 
 # As a core feature, Janus can log either on the standard output, or to

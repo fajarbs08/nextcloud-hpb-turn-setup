@@ -170,7 +170,14 @@ function certbot_step2() {
 
 	generate_dhparam_file
 
-	if ! run_certbot_command && ! is_dry_run; then
+	skip_certbot=false
+	if [ -s "$SSL_CERT_PATH_RSA" ] && [ -s "$SSL_CERT_KEY_PATH_RSA" ] && \
+	   [ -s "$SSL_CERT_PATH_ECDSA" ] && [ -s "$SSL_CERT_KEY_PATH_ECDSA" ]; then
+		log "Existing SSL certificates detected; skipping new issuance."
+		skip_certbot=true
+	fi
+
+	if [ "$skip_certbot" = false ] && ! run_certbot_command && ! is_dry_run; then
 		log_err "Something went wrong while starting Certbot."
 
 		if [ "$UNATTENDED_INSTALL" != true ]; then
@@ -212,13 +219,21 @@ function certbot_write_secrets_to_file() {
 	fi
 
 	echo -e "=== Certbot ===" >>$1
-	echo -e "Notifications regarding SSL certificates get sent to:" >>$1
-	echo -e " - '$EMAIL_USER_ADDRESS'" >>$1
+	if [ -n "$EMAIL_USER_ADDRESS" ]; then
+		echo -e "Notifications regarding SSL certificates get sent to:" >>$1
+		echo -e " - '$EMAIL_USER_ADDRESS'" >>$1
+	else
+		echo -e "Certbot registered without email." >>$1
+	fi
 }
 
 function certbot_print_info() {
 	log "SSL certificate were installed successfully and get refreshed" \
 		"\nautomatically by Certbot."
-	log "Notifications regarding SSL-Certificates get sent to:"
-	log " - ${cyan}'$EMAIL_USER_ADDRESS'"
+	if [ -n "$EMAIL_USER_ADDRESS" ]; then
+		log "Notifications regarding SSL-Certificates get sent to:"
+		log " - ${cyan}'$EMAIL_USER_ADDRESS'"
+	else
+		log "Certbot registered without email."
+	fi
 }

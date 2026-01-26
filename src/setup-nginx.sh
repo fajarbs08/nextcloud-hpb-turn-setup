@@ -109,8 +109,7 @@ function nginx_step2() {
 		allow_block=$'    allow all;\n'
 	fi
 	if ! is_dry_run; then
-		NGINX_CONF_PATH="$TMP_DIR_PATH/nginx/nextcloud-hpb.conf"
-		ALLOW_BLOCK="$allow_block" python3 - <<'PY'
+		NGINX_CONF_PATH="$TMP_DIR_PATH/nginx/nextcloud-hpb.conf" ALLOW_BLOCK="$allow_block" python3 - <<'PY'
 import os
 path = os.environ["NGINX_CONF_PATH"]
 block = os.environ["ALLOW_BLOCK"]

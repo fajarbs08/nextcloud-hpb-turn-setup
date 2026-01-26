@@ -213,12 +213,12 @@ function show_dialogs() {
 	fi
 	log "Using '$EMAIL_USER_ADDRESS' for EMAIL_USER_ADDRESS".
 
-	# Public IPs (manual input)
-	if { [ "$SHOULD_INSTALL_SIGNALING" = true ] || [ "$SHOULD_INSTALL_COTURN" = true ]; } && [ "$EXTERN_IPv4" = "" ]; then
+	# Public IPs (manual input) - only needed when Coturn is installed on this host.
+	if [ "$SHOULD_INSTALL_COTURN" = true ] && [ "$EXTERN_IPv4" = "" ]; then
 		if [ "$UNATTENDED_INSTALL" != true ]; then
 			EXTERN_IPv4=$(
 				whiptail --title "Public IPv4" \
-					--inputbox "Masukkan IPv4 publik server ini (untuk Coturn).\nKosongkan jika ingin autodetect." \
+					--inputbox "Masukkan IPv4 publik host Coturn (TURN).\nKosongkan jika ingin autodetect." \
 					10 70 "" 3>&1 1>&2 2>&3
 			)
 		fi
@@ -229,11 +229,11 @@ function show_dialogs() {
 	fi
 	log "Using '$EXTERN_IPv4' for EXTERN_IPv4".
 
-	if { [ "$SHOULD_INSTALL_SIGNALING" = true ] || [ "$SHOULD_INSTALL_COTURN" = true ]; } && [ "$EXTERN_IPv6" = "" ]; then
+	if [ "$SHOULD_INSTALL_COTURN" = true ] && [ "$EXTERN_IPv6" = "" ]; then
 		if [ "$UNATTENDED_INSTALL" != true ]; then
 			EXTERN_IPv6=$(
 				whiptail --title "Public IPv6 (opsional)" \
-					--inputbox "Masukkan IPv6 publik server ini (opsional). Kosongkan jika ingin autodetect/IPv6 tidak ada." \
+					--inputbox "Masukkan IPv6 publik host Coturn (opsional). Kosongkan jika ingin autodetect/IPv6 tidak ada." \
 					10 70 "" 3>&1 1>&2 2>&3
 			)
 		fi

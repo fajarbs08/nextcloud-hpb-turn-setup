@@ -27,10 +27,11 @@ You are guided by 8 dialogues during the installation and then the packages are 
 
 - Collabora (includes nginx/certbot/ufw)
 - HPB signaling (janus, nats, nextcloud-spreed-signaling) + nginx/certbot/ufw (requires TURN endpoint info: FQDN/port/secret)
-- Coturn + certbot + ufw + unattended-upgrades + msmtp (no nginx, so port 443 can be used for TURN)
+- Coturn + certbot + ufw + unattended-upgrades (no nginx, so port 443 can be used for TURN)
 - HPB signaling + Coturn (full Talk stack, includes nginx/certbot/ufw)
 
 Extras: TURN TLS port prompt (default 5349; 443 possible—avoid clashes with nginx, CAP_NET_BIND_SERVICE is applied), TURN secret can be generated automatically and saved to the secrets file, all values are printed at the end.
+Signaling config is generated at: `/etc/signaling/server.conf`. The internal secret is auto-generated and stored in the secrets file. Runtime status endpoint: `/hpb-status.json` (IP restricted).
 
 
 **The following systems/applications wil be installed:**
@@ -56,6 +57,14 @@ The script can help here, as it outsources the missing performance-eating applic
 The script is also suitable for larger installations where the admin simply does not want to make the entire installation by hand. We stick strictly to the Debian requirements here so that later updates work smoothly. The script secures the server with the UFW firewall. In addition, you can also deactivate SSH access. Then you can only get access to the machine via the server console.
 
 If the server is configured, ideally you don't need admin access to the machine via the internet, it is a pure work animal. The server is configured in such a way that it enables updates independently and restarts. If something goes wrong, you can either intervene yourself or simply create a new machine quickly, which is done in five minutes.
+
+**Important settings (settings.sh):**
+- `SECRETS_FILE_PATH`: default `/opt/fajarlabs/nextcloud-hpb.secrets`
+- `EMAIL_USER_ADDRESS`: optional Certbot registration email (no SMTP)
+- `SIGNALING_MAX_STREAM_BITRATE` / `SIGNALING_MAX_SCREEN_BITRATE`: bitrate caps (bps)
+- `SIGNALING_INTERNAL_SECRET`: leave empty to auto-generate
+- `HPB_STATUS_ALLOWED_IPS`: allowlist for `/hpb-status.json` (comma-separated)
+- `USE_CLOUDFLARE_PROXY`: set `true` if Nginx is behind Cloudflare proxy
 
 
 **Example application scenario**

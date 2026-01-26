@@ -1,0 +1,13 @@
+/var/log/turnserver/turnserver.log
+/var/log/janus.log
+/var/log/nats-server.log
+/var/log/nextcloud-spreed-signaling.log
+{
+    monthly
+    rotate 1
+    missingok
+    notifempty
+    compress
+    delaycompress
+    copytruncate
+}

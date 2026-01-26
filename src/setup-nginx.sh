@@ -7,6 +7,7 @@ function install_nginx() {
 	nginx_step1
 	nginx_step2
 	nginx_step3
+	nginx_tune_global
 
 	log "Nginx install completed."
 }
@@ -47,6 +48,13 @@ function nginx_step2() {
 	fi
 	sed -i "s|<INCLUDE_SNIPPET_COLLABORA>|$include_snippet_collabora|g" "$TMP_DIR_PATH"/nginx/nextcloud-hpb.conf
 
+	include_snippet_realip=""
+	if [ "$USE_CLOUDFLARE_PROXY" == true ]; then
+		include_snippet_realip="include /etc/nginx/snippets/realip-cloudflare.conf;"
+		log "Cloudflare proxy enabled; real IP snippet will be included."
+	fi
+	sed -i "s|<INCLUDE_SNIPPET_REALIP_CLOUDFLARE>|$include_snippet_realip|g" "$TMP_DIR_PATH"/nginx/nextcloud-hpb.conf
+
 	if [ "$DNS_RESOLVER" = "" ]; then
 		DNS_RESOLVER="9.9.9.9"
 		log "Using default value '$DNS_RESOLVER' for DNS_RESOLVER".
@@ -86,6 +94,21 @@ function nginx_step2() {
 
 	log "Replacing '<SCRIPT_VERSION>' with '$SETUP_VERSION'…"
 	sed -i "s|<SCRIPT_VERSION>|$SETUP_VERSION|g" "$TMP_DIR_PATH"/nginx/*
+
+	# Build allowlist for /hpb-status.json
+	allow_block=""
+	if [ -n "$HPB_STATUS_ALLOWED_IPS" ]; then
+		IFS=',' read -ra _ips <<<"$HPB_STATUS_ALLOWED_IPS"
+		for _ip in "${_ips[@]}"; do
+			_ip="$(echo "$_ip" | xargs || true)"
+			[ -z "$_ip" ] && continue
+			allow_block+=$'    allow '"${_ip}"$';\n'
+		done
+		allow_block+=$'    deny all;\n'
+	else
+		allow_block=$'    allow all;\n'
+	fi
+	sed -i "s|<HPB_STATUS_ALLOW_BLOCK>|$allow_block|g" "$TMP_DIR_PATH"/nginx/nextcloud-hpb.conf
 }
 
 function nginx_step3() {
@@ -94,11 +117,132 @@ function nginx_step3() {
 
 	is_dry_run || mkdir -p /etc/nginx/snippets || true
 	deploy_file "$TMP_DIR_PATH"/nginx/headers.conf /etc/nginx/snippets/headers.conf || true
+	if [ "$USE_CLOUDFLARE_PROXY" == true ]; then
+		deploy_file "$TMP_DIR_PATH"/nginx/realip-cloudflare.conf /etc/nginx/snippets/realip-cloudflare.conf || true
+	fi
+
+	is_dry_run || mkdir -p /etc/nginx/conf.d || true
+	deploy_file "$TMP_DIR_PATH"/nginx/nextcloud-hpb-tuning.conf /etc/nginx/conf.d/nextcloud-hpb-tuning.conf || true
+	deploy_file "$TMP_DIR_PATH"/nginx/nextcloud-hpb-rate-limit.conf /etc/nginx/conf.d/nextcloud-hpb-rate-limit.conf || true
 
 	is_dry_run || mkdir -p /var/www/html || true
 	is_dry_run || rm /var/www/html/index.nginx-debian.html || true
 	deploy_file "$TMP_DIR_PATH"/nginx/index.html /var/www/html/index.html || true
 	deploy_file "$TMP_DIR_PATH"/nginx/robots.txt /var/www/html/robots.txt || true
+
+	is_dry_run || mkdir -p /usr/local/bin || true
+	deploy_file "$TMP_DIR_PATH"/hpb-status/hpb-status.sh /usr/local/bin/hpb-status || true
+	is_dry_run || chmod 0755 /usr/local/bin/hpb-status
+	deploy_file "$TMP_DIR_PATH"/hpb-status/hpb-status.service /etc/systemd/system/hpb-status.service || true
+	deploy_file "$TMP_DIR_PATH"/hpb-status/hpb-status.timer /etc/systemd/system/hpb-status.timer || true
+	if ! is_dry_run; then
+		mkdir -p /etc/hpb-status
+		{
+			echo "nginx"
+			if [ "$SHOULD_INSTALL_SIGNALING" = true ]; then
+				echo "signaling"
+				echo "janus"
+				echo "nats"
+			fi
+			if [ "$SHOULD_INSTALL_COTURN" = true ]; then
+				echo "coturn"
+			fi
+		} >/etc/hpb-status/services.conf
+		chmod 0644 /etc/hpb-status/services.conf
+	fi
+	if ! is_dry_run; then
+		systemctl daemon-reload | tee -a $LOGFILE_PATH
+		systemctl enable --now hpb-status.timer 2>&1 | tee -a $LOGFILE_PATH
+	fi
+}
+
+function nginx_tune_global() {
+	log "\n${green}Step 4: Global Nginx tuning (moderate spec)"
+	local nginx_conf="/etc/nginx/nginx.conf"
+	local worker_connections="4096"
+
+	if is_dry_run; then
+		log "Would tune global Nginx settings in '$nginx_conf'."
+		return 0
+	fi
+
+	if [ ! -f "$nginx_conf" ]; then
+		log_err "Nginx config not found at '$nginx_conf'. Skipping global tuning."
+		return 0
+	fi
+
+	python3 - <<'PY'
+import re
+from pathlib import Path
+
+nginx_conf = Path("/etc/nginx/nginx.conf")
+data = nginx_conf.read_text()
+lines = data.splitlines()
+
+worker_connections = "4096"
+seen_wp = False
+seen_wc = False
+seen_use = False
+seen_multi = False
+seen_events = False
+in_events = False
+
+out = []
+for line in lines:
+    if re.match(r"^\s*worker_processes\b", line):
+        out.append("worker_processes auto;")
+        seen_wp = True
+        continue
+
+    if re.match(r"^\s*events\s*\{", line):
+        in_events = True
+        seen_events = True
+        out.append(line)
+        continue
+
+    if in_events:
+        if re.match(r"^\s*worker_connections\b", line):
+            out.append("    worker_connections %s;" % worker_connections)
+            seen_wc = True
+            continue
+        if re.match(r"^\s*use\s+epoll;", line):
+            seen_use = True
+        if re.match(r"^\s*multi_accept\s+on;", line):
+            seen_multi = True
+        if re.match(r"^\s*\}", line):
+            if not seen_wc:
+                out.append("    worker_connections %s;" % worker_connections)
+            if not seen_use:
+                out.append("    use epoll;")
+            if not seen_multi:
+                out.append("    multi_accept on;")
+            out.append(line)
+            in_events = False
+            continue
+
+    out.append(line)
+
+if not seen_wp:
+    # Insert after 'user' directive if present, otherwise prepend.
+    inserted = False
+    for idx, line in enumerate(out):
+        if re.match(r"^\s*user\b", line):
+            out.insert(idx + 1, "worker_processes auto;")
+            inserted = True
+            break
+    if not inserted:
+        out.insert(0, "worker_processes auto;")
+
+if not seen_events:
+    out.append("")
+    out.append("events {")
+    out.append("    worker_connections %s;" % worker_connections)
+    out.append("    use epoll;")
+    out.append("    multi_accept on;")
+    out.append("}")
+
+nginx_conf.write_text("\n".join(out) + "\n")
+PY
 }
 
 # arg: $1 is secret file path

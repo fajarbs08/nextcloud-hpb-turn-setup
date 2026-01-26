@@ -44,7 +44,6 @@ SHOULD_INSTALL_UFW=false
 SHOULD_INSTALL_NGINX=false
 SHOULD_INSTALL_CERTBOT=false
 SHOULD_INSTALL_UNATTENDEDUPGRADES=false
-SHOULD_INSTALL_MSMTP=false
 
 # Logfile get created if UNATTENDED_INSTALL is true.
 # Leave empty, if you wish that the user will be asked about this.
@@ -57,22 +56,10 @@ TMP_DIR_PATH="./tmp"
 
 # Secrets, passwords and configuration gets saved in this file.
 # Leave empty, if you wish that the user will be asked about this.
-SECRETS_FILE_PATH=""
+SECRETS_FILE_PATH="/opt/fajarlabs/nextcloud-hpb.secrets"
 
-# This email address gets passed on to the services the user whiches to install.
-# The services (like Certbot) can send email notification for important info.
-# Leave empty, if you wish that the user will be asked about this.
+# Optional email address for Certbot registration (no SMTP setup).
 EMAIL_USER_ADDRESS=""
-# The password for the address above. Used to authenticate to the SMTP server.
-EMAIL_USER_PASSWORD=""
-# The username to authencicate with. Most likely it will be just the full email
-# address. But there are email hoster which require a different username.
-EMAIL_USER_USERNAME=""
-# The SMTP server to send the emails to.
-EMAIL_SERVER_HOST=""
-# The port on which we will try to connect to the SMTP server.
-#EMAIL_SERVER_PORT="25"
-#EMAIL_SERVER_PORT="587"
 
 # Should the ssh service be disabled?
 #DISABLE_SSH_SERVER=false
@@ -84,3 +71,18 @@ SIGNALING_BUILD_FROM_SOURCES=""
 # DNS Resolver. Here a custom DNS server can be specified,
 # otherwise the one configured in resolv.conf is used
 DNS_RESOLVER=""
+
+# Set to true if Nginx is behind Cloudflare proxy (orange cloud).
+USE_CLOUDFLARE_PROXY=false
+
+# Allowed IPs for /hpb-status.json (comma-separated). Leave empty to allow all.
+HPB_STATUS_ALLOWED_IPS="15.235.236.121/32,51.254.136.125/32,51.79.236.3/32,51.79.236.4/32,51.79.236.5/32,51.79.236.6/32"
+
+# Signaling bitrate limits (bps) for stability on poor connections.
+# Defaults: 600000 (stream), 1200000 (screenshare).
+SIGNALING_MAX_STREAM_BITRATE="600000"
+SIGNALING_MAX_SCREEN_BITRATE="1200000"
+
+# Optional shared secret for internal signaling clients.
+# Leave empty to auto-generate on each setup run.
+SIGNALING_INTERNAL_SECRET=""

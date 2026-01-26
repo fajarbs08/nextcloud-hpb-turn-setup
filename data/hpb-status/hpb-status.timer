@@ -1,0 +1,10 @@
+[Unit]
+Description=Run HPB status generator periodically
+
+[Timer]
+OnBootSec=30s
+OnUnitActiveSec=30s
+Unit=hpb-status.service
+
+[Install]
+WantedBy=timers.target

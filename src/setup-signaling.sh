@@ -11,6 +11,9 @@ SIGNALING_BACKPORTS_SOURCE_FILE="/etc/apt/sources.list.d/debian-backports.list"
 : "${SIGNALING_JANUS_API_KEY:=$(openssl rand -base64 16)}"
 : "${SIGNALING_HASH_KEY:=$(openssl rand -hex 16)}"
 : "${SIGNALING_BLOCK_KEY:=$(openssl rand -hex 16)}"
+: "${SIGNALING_INTERNAL_SECRET:=$(openssl rand -hex 32)}"
+: "${SIGNALING_MAX_STREAM_BITRATE:=600000}"
+: "${SIGNALING_MAX_SCREEN_BITRATE:=1200000}"
 
 if [ -z "$SIGNALING_COTURN_URL" ]; then
 	SIGNALING_COTURN_URL="$SERVER_FQDN"
@@ -129,6 +132,19 @@ function signaling_prepare_turn_configuration() {
 
 	is_dry_run || chown -R turnserver:turnserver "$COTURN_DIR"
 	is_dry_run || chmod -R 740 "$COTURN_DIR"
+
+	if ! is_dry_run; then
+		local turn_log_dir="/var/log/turnserver"
+		local turn_log_file="$turn_log_dir/turnserver.log"
+		mkdir -p "$turn_log_dir"
+		touch "$turn_log_file"
+		if id -u turnserver >/dev/null 2>&1; then
+			chown turnserver:turnserver "$turn_log_file"
+			chmod 640 "$turn_log_file"
+		else
+			log_err "User 'turnserver' not found; leaving $turn_log_file ownership unchanged."
+		fi
+	fi
 
 	log "Replacing Coturn placeholders in templates…"
 	sed -i "s|<SIGNALING_TURN_STATIC_AUTH_SECRET>|$SIGNALING_TURN_STATIC_AUTH_SECRET|g" "$TMP_DIR_PATH"/signaling/turnserver.conf
@@ -638,9 +654,9 @@ function signaling_build_nextcloud-spreed-signaling() {
 	deploy_file "$TMP_DIR_PATH"/signaling/nextcloud-spreed-signaling.service \
 		/lib/systemd/system/nextcloud-spreed-signaling.service || true
 
-	if [ ! -d /etc/nextcloud-spreed-signaling ]; then
-		log "[Building n-s-s] Creating '/etc/nextcloud-spreed-signaling' directory"
-		mkdir /etc/nextcloud-spreed-signaling | tee -a $LOGFILE_PATH
+	if [ ! -d /etc/signaling ]; then
+		log "[Building n-s-s] Creating '/etc/signaling' directory"
+		mkdir /etc/signaling | tee -a $LOGFILE_PATH
 	fi
 
 	log "[Building n-s-s] Creating '_signaling' account"
@@ -727,8 +743,8 @@ function signaling_step4() {
 		NC_SERVER_UNDERSCORE=$(echo "$NC_SERVER" | sed "s/\./_/g")
 		SIGNALING_NC_SERVER_SECRETS[$NC_SERVER_UNDERSCORE]="$(openssl rand -hex 16)"
 		SIGNALING_NC_SERVER_SESSIONLIMIT[$NC_SERVER_UNDERSCORE]=0
-		SIGNALING_NC_SERVER_MAXSTREAMBITRATE[$NC_SERVER_UNDERSCORE]=0
-		SIGNALING_NC_SERVER_MAXSCREENBITRATE[$NC_SERVER_UNDERSCORE]=0
+		SIGNALING_NC_SERVER_MAXSTREAMBITRATE[$NC_SERVER_UNDERSCORE]="$SIGNALING_MAX_STREAM_BITRATE"
+		SIGNALING_NC_SERVER_MAXSCREENBITRATE[$NC_SERVER_UNDERSCORE]="$SIGNALING_MAX_SCREEN_BITRATE"
 
 		SIGNALING_BACKENDS+=("nextcloud-backend-$i")
 
@@ -737,8 +753,8 @@ function signaling_step4() {
 			url = https://$NC_SERVER
 			secret = ${SIGNALING_NC_SERVER_SECRETS["$NC_SERVER_UNDERSCORE"]}
 			#sessionlimit = ${SIGNALING_NC_SERVER_SESSIONLIMIT["$NC_SERVER_UNDERSCORE"]}
-			#maxstreambitrate = ${SIGNALING_NC_SERVER_MAXSTREAMBITRATE["$NC_SERVER_UNDERSCORE"]}
-			#maxscreenbitrate = ${SIGNALING_NC_SERVER_MAXSCREENBITRATE["$NC_SERVER_UNDERSCORE"]}
+			maxstreambitrate = ${SIGNALING_NC_SERVER_MAXSTREAMBITRATE["$NC_SERVER_UNDERSCORE"]}
+			maxscreenbitrate = ${SIGNALING_NC_SERVER_MAXSCREENBITRATE["$NC_SERVER_UNDERSCORE"]}
 		EOF
 
 		# Escape newlines for sed later on.
@@ -753,6 +769,10 @@ function signaling_step4() {
 	# log "Replacing '<SIGNALING_TURN_STATIC_AUTH_SECRET>' with '$SIGNALING_TURN_STATIC_AUTH_SECRET'…"
 	log "Replacing '<SIGNALING_TURN_STATIC_AUTH_SECRET>'…"
 	sed -i "s|<SIGNALING_TURN_STATIC_AUTH_SECRET>|$SIGNALING_TURN_STATIC_AUTH_SECRET|g" "$TMP_DIR_PATH"/signaling/*
+
+	# log "Replacing '<SIGNALING_INTERNAL_SECRET>' with '$SIGNALING_INTERNAL_SECRET'…"
+	log "Replacing '<SIGNALING_INTERNAL_SECRET>'…"
+	sed -i "s|<SIGNALING_INTERNAL_SECRET>|$SIGNALING_INTERNAL_SECRET|g" "$TMP_DIR_PATH"/signaling/*
 
 	# log "Replacing '<SIGNALING_JANUS_API_KEY>' with '$SIGNALING_JANUS_API_KEY'…"
 	log "Replacing '<SIGNALING_JANUS_API_KEY>…'"
@@ -828,6 +848,7 @@ function signaling_step5() {
 
 	# Ensure /etc/janus directory exists
 	is_dry_run || mkdir -p /etc/janus
+	is_dry_run || mkdir -p /etc/signaling
 
 	if [ "$(dpkg --print-architecture)" = "arm64" ]; then
 		deploy_file "$TMP_DIR_PATH"/signaling/janus_aarch64.jcfg /etc/janus/janus.jcfg || true
@@ -839,11 +860,49 @@ function signaling_step5() {
 	deploy_file "$TMP_DIR_PATH"/signaling/janus.transport.http.jcfg /etc/janus/janus.transport.http.jcfg || true
 	deploy_file "$TMP_DIR_PATH"/signaling/janus.transport.websockets.jcfg /etc/janus/janus.transport.websockets.jcfg || true
 
-	deploy_file "$TMP_DIR_PATH"/signaling/signaling-server.conf /etc/nextcloud-spreed-signaling/server.conf || true
+	deploy_file "$TMP_DIR_PATH"/signaling/signaling-server.conf /etc/signaling/server.conf || true
+	deploy_file "$TMP_DIR_PATH"/signaling/nats-server.conf /etc/nats-server.conf || true
+
+	local signaling_bin
+	signaling_bin="$(command -v nextcloud-spreed-signaling-server || true)"
+	if [ -z "$signaling_bin" ]; then
+		signaling_bin="/usr/local/bin/nextcloud-spreed-signaling-server"
+		log_err "nextcloud-spreed-signaling-server not found in PATH; using fallback '$signaling_bin'."
+	fi
+	sed -i "s|<SIGNALING_SERVER_BIN>|$signaling_bin|g" \
+		"$TMP_DIR_PATH"/signaling/nextcloud-spreed-signaling.override.conf
+
+	# Ensure service logs are written to /var/log
+	if ! is_dry_run; then
+		touch /var/log/nats-server.log
+		if id -u nats >/dev/null 2>&1; then
+			chown nats:nats /var/log/nats-server.log
+			chmod 640 /var/log/nats-server.log
+		else
+			log_err "User 'nats' not found; leaving /var/log/nats-server.log ownership unchanged."
+		fi
+
+		touch /var/log/janus.log
+		if id -u janus >/dev/null 2>&1; then
+			chown janus:janus /var/log/janus.log
+			chmod 640 /var/log/janus.log
+		else
+			log_err "User 'janus' not found; leaving /var/log/janus.log ownership unchanged."
+		fi
+
+		touch /var/log/nextcloud-spreed-signaling.log
+		chmod 640 /var/log/nextcloud-spreed-signaling.log
+	fi
+
+	is_dry_run || mkdir -p /etc/systemd/system/nextcloud-spreed-signaling.service.d
+	deploy_file "$TMP_DIR_PATH"/signaling/nextcloud-spreed-signaling.override.conf \
+		/etc/systemd/system/nextcloud-spreed-signaling.service.d/override.conf || true
 
 	if [ "$SHOULD_INSTALL_COTURN" = true ]; then
 		signaling_deploy_turn_configuration
 	fi
+
+	is_dry_run || systemctl daemon-reload | tee -a $LOGFILE_PATH
 }
 
 # arg: $1 is secret file path
@@ -856,6 +915,7 @@ function signaling_write_secrets_to_file() {
 	echo -e "Janus API key: $SIGNALING_JANUS_API_KEY" >>$1
 	echo -e "Hash key:      $SIGNALING_HASH_KEY" >>$1
 	echo -e "Block key:     $SIGNALING_BLOCK_KEY" >>$1
+	echo -e "Internal secret: $SIGNALING_INTERNAL_SECRET" >>$1
 	echo -e "" >>$1
 	echo -e "Allowed Nextcloud Servers:" >>$1
 	echo -e "$(printf '\t- https://%s\n' "${NEXTCLOUD_SERVER_FQDNS[@]}")" >>$1

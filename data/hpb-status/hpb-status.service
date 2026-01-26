@@ -1,0 +1,6 @@
+[Unit]
+Description=Generate HPB status JSON for landing page
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/hpb-status

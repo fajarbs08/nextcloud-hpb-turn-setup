@@ -26,10 +26,11 @@ Sie werden bei der Installation durch 8 Dialoge geführt und danach werden die P
 
 - Collabora (inkl. nginx/certbot/ufw)
 - HPB Signaling (janus, nats, nextcloud-spreed-signaling) + nginx/certbot/ufw (butuh info TURN eksternal: FQDN/port/secret)
-- Coturn + certbot + ufw + unattended-upgrades + msmtp (ohne nginx, Port 443 kann für TURN genutzt werden)
+- Coturn + certbot + ufw + unattended-upgrades (ohne nginx, Port 443 kann für TURN genutzt werden)
 - HPB Signaling + Coturn (gesamter Talk-Stack, inkl. nginx/certbot/ufw)
 
 Zusätze: Eingabe port TURN (Standard 5349, 443 möglich; bei 443 auf Kollision mit nginx achten, CAP_NET_BIND_SERVICE wird gesetzt), Secret TURN kann automatisch erzeugt und in der Secrets-Datei gesichert werden, alle Werte werden am Ende ausgegeben.
+Signaling-Konfiguration wird erstellt unter: `/etc/signaling/server.conf`. Das interne Secret wird automatisch erzeugt und in der Secrets-Datei gespeichert. Laufzeit-Status: `/hpb-status.json` (IP-beschränkt).
 
 
 **Folgende Systeme/Anwendungen werden installiert:**
@@ -55,6 +56,14 @@ Hier kann das Skript helfen, da wir damit die fehlenden leistungsfressenden Anwe
 Das Skript eignet sich aber auch für größere Installationen, bei denen der Admin einfach nicht die ganze Installation per Hand machen möchte. Wir halten uns hier streng an die Debian-Vorgaben, damit spätere Updates reibungslos funktionieren. Das Skript sichert den Server mit der UfW Firewall ab. Zusätzlich können Sie aber auch noch den SSH-Zugriff deaktivieren. Dann kommen Sie nur noch über die Server-Konsole an die Maschine ran.
 
 Wenn der Server einmal konfiguriert ist, braucht man im Idealfall auch kein Admin-Zugriff auf die Maschine übers Netz, es ist ein reines Arbeitstier. Der Server ist so konfiguriert, dass er selbstständig Updates einspielt und neustartet. Falls dann doch mal etwas schief geht, können Sie entweder selbst eingreifen oder einfach schnell eine neue Maschine erstellen, das ist ja in fünf Minuten erledigt.
+
+**Wichtige Einstellungen (settings.sh):**
+- `SECRETS_FILE_PATH`: Standard `/opt/fajarlabs/nextcloud-hpb.secrets`
+- `EMAIL_USER_ADDRESS`: optional für Certbot (kein SMTP)
+- `SIGNALING_MAX_STREAM_BITRATE` / `SIGNALING_MAX_SCREEN_BITRATE`: Bitrate-Limits (bps)
+- `SIGNALING_INTERNAL_SECRET`: leer lassen für Auto-Generierung
+- `HPB_STATUS_ALLOWED_IPS`: Allowlist für `/hpb-status.json` (kommagetrennt)
+- `USE_CLOUDFLARE_PROXY`: `true`, wenn Nginx hinter Cloudflare-Proxy läuft
 
 
 **Beispiel-Anwendungs-Szenario:**

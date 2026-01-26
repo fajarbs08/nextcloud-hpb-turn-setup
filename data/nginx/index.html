@@ -3,29 +3,332 @@
 
 <head>
     <meta http-equiv="Content-Type" content="text/html;charset=utf-8">
-    <title>This page intentionally left blank (default)</title>
+    <title>Nextcloud HPB Server</title>
     <style>
-        body { font-family: sans-serif; }
+        @import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap");
+        :root {
+            --bg: #0a0e13;
+            --panel: #0f1624;
+            --panel-2: #141d2f;
+            --text: #ecf2f8;
+            --muted: #97a4b3;
+            --accent: #18d39a;
+            --accent-2: #66a3ff;
+            --line: rgba(255,255,255,0.08);
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: "Space Grotesk", "Avenir Next", "Segoe UI", sans-serif;
+            color: var(--text);
+            background:
+                linear-gradient(90deg, rgba(255,255,255,0.06) 1px, transparent 1px) 0 0/40px 40px,
+                linear-gradient(180deg, rgba(255,255,255,0.04) 1px, transparent 1px) 0 0/40px 40px,
+                radial-gradient(900px 500px at 80% -10%, rgba(102,163,255,0.18), transparent 60%),
+                radial-gradient(800px 500px at -10% 10%, rgba(24,211,154,0.15), transparent 60%),
+                var(--bg);
+        }
+        .wrap {
+            max-width: 1040px;
+            margin: 0 auto;
+            padding: 56px 24px 72px;
+        }
+        .hero {
+            display: grid;
+            grid-template-columns: 1.1fr 0.9fr;
+            gap: 22px;
+            background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01));
+            border: 1px solid var(--line);
+            border-radius: 22px;
+            padding: 32px;
+            box-shadow: 0 24px 80px rgba(0,0,0,0.35);
+            position: relative;
+            overflow: hidden;
+        }
+        .hero:before {
+            content: "";
+            position: absolute;
+            right: -120px;
+            top: -120px;
+            width: 240px;
+            height: 240px;
+            background: radial-gradient(circle, rgba(24,211,154,0.35), transparent 70%);
+            filter: blur(10px);
+        }
+        .pill {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 999px;
+            font-size: 11px;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: #07120d;
+            background: linear-gradient(90deg, var(--accent), var(--accent-2));
+        }
+        .brand {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 6px;
+            color: var(--muted);
+            font-size: 13px;
+        }
+        .brand strong {
+            color: var(--text);
+        }
+        .brand a {
+            text-decoration: none;
+            border-bottom: 1px solid transparent;
+        }
+        .brand a:hover {
+            border-bottom-color: var(--accent);
+        }
+        h1 {
+            margin: 16px 0 8px;
+            font-size: 36px;
+            line-height: 1.2;
+            letter-spacing: -0.02em;
+        }
+        p {
+            margin: 8px 0 0;
+            color: var(--muted);
+            font-size: 15px;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 12px;
+            margin-top: 18px;
+        }
+        .card {
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            padding: 16px;
+        }
+        .label {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--muted);
+        }
+        .value {
+            margin-top: 8px;
+            font-size: 15px;
+        }
+        .mono {
+            font-family: "Space Mono", "SFMono-Regular", Consolas, monospace;
+            font-size: 12px;
+            color: var(--muted);
+        }
+        .status {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .dot {
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            background: var(--accent);
+            box-shadow: 0 0 12px rgba(24,211,154,0.6);
+        }
+        .cta {
+            margin-top: 22px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        .btn {
+            display: inline-block;
+            padding: 10px 16px;
+            border-radius: 10px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        .btn-primary {
+            color: #0b0f14;
+            background: linear-gradient(90deg, var(--accent), var(--accent-2));
+            box-shadow: 0 10px 30px rgba(24,211,154,0.25);
+        }
+        .btn-ghost {
+            color: var(--text);
+            border: 1px solid var(--line);
+        }
+        .aside {
+            background: var(--panel-2);
+            border: 1px solid var(--line);
+            border-radius: 18px;
+            padding: 18px;
+            height: 100%;
+        }
+        .aside h2 {
+            margin: 0 0 10px;
+            font-size: 16px;
+        }
+        .list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: grid;
+            gap: 10px;
+        }
+        .list li {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 12px;
+            border-radius: 12px;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--line);
+        }
         .footer {
-            position: fixed;
-            bottom: 10px;
-            right: 10px;
-            font-size: 10px;
-            color: #888;
+            margin-top: 28px;
+            font-size: 12px;
+            color: var(--muted);
             text-align: right;
+        }
+        a { color: inherit; }
+        @media (max-width: 780px) {
+            .hero { grid-template-columns: 1fr; }
+            .grid { grid-template-columns: 1fr; }
+            .footer { text-align: left; }
         }
     </style>
 </head>
 
 <body>
-    <div class="tpilb">
-        <a href="http://www.this-page-intentionally-left-blank.org/">this page intentionally left blank</a>
+    <div class="wrap">
+        <div class="hero">
+            <div>
+                <span class="pill">Hanara Managed</span>
+                <h1>Nextcloud High Performance Backend</h1>
+                <p>Stable group calls powered by a hardened signaling stack — managed by Hanara.</p>
+                <div class="brand">
+                    <span>Trusted operations by</span>
+                    <strong><a href="https://hanara.id">hanara.id</a></strong>
+                </div>
+
+                <div class="grid">
+                    <div class="card">
+                        <div class="label">Setup Script</div>
+                        <div class="value"><SCRIPT_VERSION></div>
+                        <div class="mono">build: stable</div>
+                    </div>
+                    <div class="card">
+                        <div class="label">Operating System</div>
+                        <div class="value">Debian <DEBIAN_VERSION></div>
+                        <div class="mono">hardened defaults</div>
+                    </div>
+                </div>
+
+                <div class="cta">
+                    <a class="btn btn-primary" href="https://hanara.id">Get Managed Nextcloud</a>
+                    <a class="btn btn-ghost" href="https://hanara.id">Support &amp; Maintenance</a>
+                    <a class="btn btn-ghost" href="https://fajarlabs.com">Script by Fajar</a>
+                </div>
+            </div>
+
+            <div class="aside">
+                <h2>Runtime Overview</h2>
+                <ul class="list">
+                    <li>
+                        <span class="label">Loading</span>
+                        <span class="mono">Please wait…</span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="footer">
+            Nextcloud High Performance Backend Server
+        </div>
     </div>
-    <div class="footer">
-        Nextcloud High Performance Backend Server<br>
-        Setup Script Version: <SCRIPT_VERSION><br>
-        Debian <DEBIAN_VERSION>
-    </div>
+
+    <script>
+        (function () {
+            function labelFromState(state) {
+                if (state === "active") return "Online";
+                if (state === "inactive") return "Offline";
+                if (state === "failed") return "Failed";
+                if (state === "activating") return "Starting";
+                if (state === "deactivating") return "Stopping";
+                if (state === "not-found") return "Not installed";
+                return "Unknown";
+            }
+
+            function renderList(services) {
+                var list = document.querySelector(".list");
+                if (!list) return;
+                list.innerHTML = "";
+
+                var labels = {
+                    nginx: "Proxy",
+                    signaling: "Signaling",
+                    janus: "Janus",
+                    nats: "NATS",
+                    coturn: "Coturn"
+                };
+
+                Object.keys(services).forEach(function (key) {
+                    var li = document.createElement("li");
+                    var label = document.createElement("span");
+                    label.className = "label";
+                    label.textContent = labels[key] || key;
+
+                    var status = document.createElement("span");
+                    status.className = "status";
+                    var dot = document.createElement("span");
+                    dot.className = "dot";
+                    status.appendChild(dot);
+                    status.appendChild(document.createTextNode(labelFromState(services[key])));
+
+                    li.appendChild(label);
+                    li.appendChild(status);
+                    list.appendChild(li);
+                });
+
+                if (services.signaling) {
+                    var liEndpoint = document.createElement("li");
+                    var labelEndpoint = document.createElement("span");
+                    labelEndpoint.className = "label";
+                    labelEndpoint.textContent = "Endpoint";
+                    var valueEndpoint = document.createElement("span");
+                    valueEndpoint.className = "mono";
+                    valueEndpoint.textContent = "/standalone-signaling";
+                    liEndpoint.appendChild(labelEndpoint);
+                    liEndpoint.appendChild(valueEndpoint);
+                    list.appendChild(liEndpoint);
+                }
+
+                var liTls = document.createElement("li");
+                var labelTls = document.createElement("span");
+                labelTls.className = "label";
+                labelTls.textContent = "TLS";
+                var valueTls = document.createElement("span");
+                valueTls.className = "mono";
+                valueTls.textContent = (location.protocol === "https:") ? "Enabled" : "Disabled";
+                liTls.appendChild(labelTls);
+                liTls.appendChild(valueTls);
+                list.appendChild(liTls);
+            }
+
+            fetch("/hpb-status.json", { cache: "no-store" })
+                .then(function (res) {
+                    if (!res.ok) throw new Error("status fetch failed");
+                    return res.json();
+                })
+                .then(function (data) {
+                    if (!data || !data.services) return;
+                    renderList(data.services);
+                })
+                .catch(function () {
+                    renderList({ nginx: "unknown" });
+                });
+        })();
+    </script>
 </body>
 
 </html>

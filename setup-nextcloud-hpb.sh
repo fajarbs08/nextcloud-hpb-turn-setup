@@ -21,11 +21,7 @@ TMP_DIR_PATH="./tmp"
 EXTERN_IPv4=""
 EXTERN_IPv6=""
 SECRETS_FILE_PATH=""   # Ask user
-EMAIL_USER_ADDRESS=""  # Ask user
-EMAIL_USER_PASSWORD="" # Ask user
-EMAIL_USER_USERNAME="" # Ask user
-EMAIL_SERVER_HOST=""   # Ask user
-EMAIL_SERVER_PORT=""   # Ask user
+EMAIL_USER_ADDRESS=""  # Optional: Certbot registration email
 DISABLE_SSH_SERVER=false
 SIGNALING_BUILD_FROM_SOURCES="" # Ask user
 SHOULD_INSTALL_COTURN=false
@@ -196,106 +192,26 @@ function show_dialogs() {
 				--inputbox "Please enter a path to a file where all "$(
 				)"secrets, passwords and configuration shall be stored.\n\n"$(
 				)"The directory and its parents get created automatically." \
-				10 65 "./nextcloud-hpb.secrets" 3>&1 1>&2 2>&3
+				10 65 "/opt/fajarlabs/nextcloud-hpb.secrets" 3>&1 1>&2 2>&3
 		)
 	fi
 	log "Using '$SECRETS_FILE_PATH' for SECRETS_FILE_PATH".
 
-	# - E-Mail stuff below -
+	# Certbot email (optional)
 	if [ "$EMAIL_USER_ADDRESS" = "" ]; then
 		if [ "$UNATTENDED_INSTALL" = true ]; then
-			log_err "Can't continue since this is a non-interactive installation and I'm" \
-			        "missing EMAIL_USER_ADDRESS!"
-			exit 1
-		fi
-
-		EMAIL_USER_ADDRESS=$(
-			whiptail --title "E-Mail address" \
-				--inputbox "Enter a valid email address which will be used for $(
-				)notifications.$(
-				)Please note that this email must be yours and you can send $(
-				)emails with it using a SMTP server. If in doubt ask your $(
-				)email provider for SMTP server settings and credentials." \
-				10 65 "johndoe@example.com" 3>&1 1>&2 2>&3
-		)
-	fi
-	log "Using '$EMAIL_USER_ADDRESS' for EMAIL_USER_ADDRESS".
-
-	if [ "$EMAIL_USER_PASSWORD" = "" ]; then
-		if [ "$UNATTENDED_INSTALL" = true ]; then
-			log_err "Can't continue since this is a non-interactive installation and I'm" \
-			        "missing EMAIL_USER_PASSWORD!"
-			exit 1
-		fi
-
-		EMAIL_USER_PASSWORD=$(
-			whiptail --title "E-Mail SMTP password" \
-				--inputbox "Enter the password which msmtp will use to $(
-				)authenticate against the SMTP server." \
-				10 65 "" 3>&1 1>&2 2>&3
-		)
-	fi
-
-	if [[ -n "$EMAIL_USER_PASSWORD" ]]; then
-		# Do not expose password in log, mask it.
-		log "Using non-empty password for EMAIL_USER_PASSWORD".
-	else
-		log "No password set for EMAIL_USER_PASSWORD…"
-	fi
-
-	if [ "$EMAIL_USER_USERNAME" = "" ]; then
-		if [ "$UNATTENDED_INSTALL" = true ]; then
-			log_err "Can't continue since this is a non-interactive installation and I'm" \
-			        "missing EMAIL_USER_USERNAME!"
-			exit 1
-		fi
-
-		EMAIL_USER_USERNAME=$(
-			whiptail --title "E-Mail SMTP username" \
-				--inputbox "Enter the username which msmtp will use to $(
-				)authenticate against the SMTP server.$(
-				)Often the username is equal to the email address." \
-				10 65 "$EMAIL_USER_ADDRESS" 3>&1 1>&2 2>&3
-		)
-	fi
-	log "Using '$EMAIL_USER_USERNAME' for EMAIL_USER_USERNAME".
-
-	if [ "$EMAIL_SERVER_HOST" = "" ]; then
-		default_smtp_host="mail.example.org"
-		if [[ "$EMAIL_USER_ADDRESS" == *"@"* ]]; then
-			domain_part="${EMAIL_USER_ADDRESS#*@}"
-			if [[ -n "$domain_part" ]]; then
-				default_smtp_host="mail.$domain_part"
-			fi
-		fi
-
-		if [ "$UNATTENDED_INSTALL" = true ]; then
-			EMAIL_SERVER_HOST="$default_smtp_host"
+			# Allow unattended installs without email (Certbot will use --register-unsafely-without-email).
+			:
 		else
-			EMAIL_SERVER_HOST=$(
-				whiptail --title "E-Mail SMTP host" \
-					--inputbox "Enter the host address on which the SMTP server is reachable." \
-					10 65 "$default_smtp_host" 3>&1 1>&2 2>&3
+			EMAIL_USER_ADDRESS=$(
+				whiptail --title "Certbot E-Mail address" \
+					--inputbox "Enter a valid email address to register with Let's Encrypt (optional).\n$(
+					)Leave empty to proceed without email." \
+					10 65 "" 3>&1 1>&2 2>&3
 			)
 		fi
 	fi
-	log "Using '$EMAIL_SERVER_HOST' for EMAIL_SERVER_HOST".
-
-	if [ "$EMAIL_SERVER_PORT" = "" ]; then
-		if [ "$UNATTENDED_INSTALL" = true ]; then
-			log_err "Can't continue since this is a non-interactive installation and I'm" \
-			        "missing EMAIL_SERVER_PORT!"
-			exit 1
-		fi
-
-		EMAIL_SERVER_PORT=$(
-			whiptail --title "E-Mail SMTP port" \
-				--inputbox "Enter the port on which the SMTP server is reachable." \
-				10 65 "587" 3>&1 1>&2 2>&3
-		)
-	fi
-	log "Using '$EMAIL_SERVER_PORT' for EMAIL_SERVER_PORT".
-	# -----
+	log "Using '$EMAIL_USER_ADDRESS' for EMAIL_USER_ADDRESS".
 
 	# Public IPs (manual input)
 	if { [ "$SHOULD_INSTALL_SIGNALING" = true ] || [ "$SHOULD_INSTALL_COTURN" = true ]; } && [ "$EXTERN_IPv4" = "" ]; then
@@ -739,13 +655,12 @@ function main() {
 		SHOULD_INSTALL_CERTBOT=false
 		SHOULD_INSTALL_NGINX=false
 		SHOULD_INSTALL_UNATTENDEDUPGRADES=false
-		SHOULD_INSTALL_MSMTP=false
 		SIGNALING_COTURN_TLS_PORT=""
 
 		CHOICES=$(whiptail --title "Select services" --separate-output \
 			--checklist "Use the space bar key to select/deselect the services $(
 			)you want to install.\n\nNote: Depending on your choices, supporting $(
-			)packages like Certbot, Nginx, ufw, unattended-upgrades, msmtp may $(
+			)packages like Certbot, Nginx, ufw, unattended-upgrades may $(
 			)also be installed." 16 90 4 \
 			"1" "Install Collabora (coolwsd, code-brand)" OFF \
 			"2" "Install HPB signaling (nats-server, janus, nextcloud-spreed-signaling; requires TURN endpoint info)" OFF \
@@ -766,7 +681,6 @@ function main() {
 					SHOULD_INSTALL_NGINX=true
 					SHOULD_INSTALL_CERTBOT=true
 					SHOULD_INSTALL_UNATTENDEDUPGRADES=true
-					SHOULD_INSTALL_MSMTP=true
 					;;
 				"2")
 					log "HPB signaling (certbot, nginx, ufw) will be installed."
@@ -775,15 +689,13 @@ function main() {
 					SHOULD_INSTALL_NGINX=true
 					SHOULD_INSTALL_CERTBOT=true
 					SHOULD_INSTALL_UNATTENDEDUPGRADES=true
-					SHOULD_INSTALL_MSMTP=true
 					;;
 				"3")
-					log "Coturn (certbot, ufw, unattended-upgrades, msmtp) will be installed."
+					log "Coturn (certbot, ufw, unattended-upgrades) will be installed."
 					SHOULD_INSTALL_UFW=true
 					SHOULD_INSTALL_COTURN=true
 					SHOULD_INSTALL_CERTBOT=true
 					SHOULD_INSTALL_UNATTENDEDUPGRADES=true
-					SHOULD_INSTALL_MSMTP=true
 					;;
 				"4")
 					log "HPB signaling + Coturn (certbot, nginx, ufw) will be installed."
@@ -793,7 +705,6 @@ function main() {
 					SHOULD_INSTALL_NGINX=true
 					SHOULD_INSTALL_CERTBOT=true
 					SHOULD_INSTALL_UNATTENDEDUPGRADES=true
-					SHOULD_INSTALL_MSMTP=true
 					;;
 				*)
 					log_err "Unsupported service $CHOICE!" >&2
@@ -847,7 +758,7 @@ function main() {
 
 	scripts=('src/setup-ufw.sh' 'src/setup-collabora.sh'
 		'src/setup-signaling.sh' 'src/setup-nginx.sh' 'src/setup-certbot.sh'
-		'src/setup-unattendedupgrades.sh' 'src/setup-msmtp.sh')
+		'src/setup-unattendedupgrades.sh')
 	for script in "${scripts[@]}"; do
 		log "Sourcing '$script'."
 		source "$script"
@@ -874,9 +785,9 @@ function main() {
 	if [ "$SHOULD_INSTALL_UNATTENDEDUPGRADES" = true ]; then install_unattendedupgrades; else
 		log "Won't install unattended upgrades."
 	fi
-	if [ "$SHOULD_INSTALL_MSMTP" = true ]; then install_msmtp; else
-		log "Won't install msmtp email setup."
-	fi
+
+	log "Deploying logrotate configuration."
+	deploy_file "$TMP_DIR_PATH"/logrotate/nextcloud-hpb /etc/logrotate.d/nextcloud-hpb || true
 
 	log "Every installation completed."
 
@@ -904,7 +815,7 @@ function main() {
 		SERVICES_TO_ENABLE+=("nginx")
 	fi
 	#if [ "$SHOULD_INSTALL_UNATTENDEDUPGRADES" = true ]; then fi
-	#if [ "$SHOULD_INSTALL_MSMTP" = true ]; then fi
+	# (msmtp removed)
 
 	SERVICE_ERRORS=()
 	if ! is_dry_run; then
@@ -954,10 +865,7 @@ function main() {
 	# 	unattendedupgrades_print_info
 	#	log "======================================================================"
 	# fi
-	if [ "$SHOULD_INSTALL_MSMTP" = true ]; then
-		msmtp_print_info
-		log "======================================================================"
-	fi
+	# (msmtp removed)
 
 	is_dry_run || mkdir -p "$(dirname "$SECRETS_FILE_PATH")"
 	is_dry_run || touch "$SECRETS_FILE_PATH"
@@ -987,9 +895,7 @@ function main() {
 	# if [ "$SHOULD_INSTALL_UNATTENDEDUPGRADES" = true ]; then
 	# 	unattendedupgrades_write_secrets_to_file "$SECRETS_FILE_PATH"
 	# fi
-	if [ "$SHOULD_INSTALL_MSMTP" = true ]; then
-		msmtp_write_secrets_to_file "$SECRETS_FILE_PATH"
-	fi
+	# (msmtp removed)
 
 	# Display service errors summary if any occurred
 	if [ ${#SERVICE_ERRORS[@]} -gt 0 ]; then

@@ -39,10 +39,18 @@ function run_certbot_command() {
 		certbot_authenticator=(--standalone --preferred-challenges http-01 --http-01-port 80)
 	fi
 
+	local certbot_email_args=()
+	if [ -n "$EMAIL_USER_ADDRESS" ]; then
+		certbot_email_args=(--email "$EMAIL_USER_ADDRESS")
+	else
+		certbot_email_args=(--register-unsafely-without-email)
+	fi
+
 	# RSA certificate
 	certbot_args=(certonly "${certbot_authenticator[@]}" $arg_staging $arg_interactive $arg_dry_run
+		"${certbot_email_args[@]}"
 		--key-path "$SSL_CERT_KEY_PATH_RSA" --domains "$SERVER_FQDN"
-		--fullchain-path "$SSL_CERT_PATH_RSA" --email "$EMAIL_USER_ADDRESS"
+		--fullchain-path "$SSL_CERT_PATH_RSA"
 		--rsa-key-size 4096 --cert-name "$SERVER_FQDN"-rsa
 		--chain-path "$SSL_CHAIN_PATH_RSA")
 
@@ -71,8 +79,9 @@ function run_certbot_command() {
 
 	# ECDSA certificate
 	certbot_args=(certonly "${certbot_authenticator[@]}" $arg_staging $arg_interactive $arg_dry_run
+		"${certbot_email_args[@]}"
 		--key-path "$SSL_CERT_KEY_PATH_ECDSA" --domains "$SERVER_FQDN"
-		--fullchain-path "$SSL_CERT_PATH_ECDSA" --email "$EMAIL_USER_ADDRESS"
+		--fullchain-path "$SSL_CERT_PATH_ECDSA"
 		--key-type ecdsa --cert-name "$SERVER_FQDN"-ecdsa
 		--chain-path "$SSL_CHAIN_PATH_ECDSA")
 
